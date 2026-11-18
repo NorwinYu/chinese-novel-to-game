@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chinese-novel-to-game — 把一本中文小说做成能玩的游戏</title>
+<meta name="description" content="一个开源的 agent skill：把中文小说 TXT 变成可玩的网页游戏。清洗切章、逐章抽取、知识账本、分阶段角色卡、玩法模拟、3D 场景，每一步都有量化门槛与人工金标。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="chinese-novel-to-game">
+<meta property="og:description" content="把一本中文小说，做成能玩的游戏。一条可核查的流水线，NPC 只能知道自己当时知道的事。">
+<meta name="theme-color" content="#0a0a0b">
+<link rel="canonical" href="https://norwinyu.github.io/chinese-novel-to-game/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0a0b'/%3E%3Cg fill='none' stroke='%23d05a41' stroke-width='1.5'%3E%3Crect x='8' y='7' width='16' height='18'/%3E%3Cpath d='M12 7v18M12 13h8M12 18h8'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a0a0b; --panel:#0f1012; --panel-2:#121316;
+  --text:#f0eadf; --muted:#a39d93; --dim:#7e7870;
+  --line:rgba(240,234,223,.13); --line-2:rgba(240,234,223,.065);
+  --accent:#d05a41; --gold:#c8a86e;
+  --serif:"Songti SC","Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC",STSong,"SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{
+  margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;font-feature-settings:"kern" 1,"liga" 1;
+  overflow-x:hidden;
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.028;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--accent);color:#fff}
+a{color:inherit}
+.wrap{width:min(1180px,calc(100% - 48px));margin:0 auto}
+.hero-copy,.rail,.layer,.card,.codewrap,.pipe-list,.pipe-panel,.start>*,.stack>*,.row>*,.tech li>*{min-width:0}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;inset:0 0 auto;height:66px;z-index:60;display:flex;align-items:center;
+  background:rgba(10,10,11,.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line-2)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.seal{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--accent);
+  border-radius:3px;color:var(--accent);font-family:var(--serif);font-size:16px;line-height:1;
+  box-shadow:inset 0 0 0 3px rgba(208,90,65,.08)}
+.brand b{font-family:var(--serif);font-weight:600;font-size:14.5px;letter-spacing:.02em}
+.brand i{font-family:var(--mono);font-style:normal;font-size:10px;letter-spacing:.16em;color:var(--dim);margin-left:2px}
+.navlinks{display:flex;gap:30px}
+.navlinks a{position:relative;color:var(--muted);text-decoration:none;font-size:12.5px;letter-spacing:.06em;padding:6px 0;transition:color .25s}
+.navlinks a:hover{color:var(--text)}
+.navlinks a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.navlinks a:hover::after,.navlinks a.active::after{transform:scaleX(1)}
+.navlinks a.active{color:var(--text)}
+.gh{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;transition:.25s}
+.gh:hover{color:var(--text);border-color:var(--accent)}
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:186px 0 108px;overflow:hidden}
+.hero::before{content:"";position:absolute;width:940px;height:940px;left:-320px;top:-420px;
+  background:radial-gradient(circle,rgba(208,90,65,.13),rgba(208,90,65,0) 62%);pointer-events:none}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(90deg,var(--line-2) 1px,transparent 1px);background-size:25% 100%;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 78%);mask-image:linear-gradient(180deg,#000,transparent 78%)}
+.hero-grid{position:relative;display:grid;grid-template-columns:1.18fr .82fr;gap:76px;align-items:center}
+.eyebrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0}
+.eyebrow::before{content:"";width:28px;height:1px;background:var(--accent);flex:none}
+.eyebrow .dot{width:3px;height:3px;border-radius:50%;background:var(--dim);flex:none}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.5rem,5.1vw,4.5rem);line-height:1.16;
+  letter-spacing:.005em;margin:26px 0 24px}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{color:var(--muted);font-size:1.02rem;line-height:1.95;max-width:35em;margin:0}
+.lede strong{color:var(--text);font-weight:500}
+.meta{display:flex;gap:34px;margin-top:38px;flex-wrap:wrap}
+.meta div{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.meta b{display:block;font-family:var(--serif);font-size:21px;font-weight:600;color:var(--text);
+  letter-spacing:0;margin-bottom:3px}
+.cta{display:flex;gap:12px;margin-top:42px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:12px 22px;border:1px solid var(--line);
+  color:var(--text);text-decoration:none;font-size:13px;letter-spacing:.05em;transition:.28s var(--ease);background:transparent}
+.btn span{font-family:var(--mono);font-size:12px}
+.btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.btn.solid{background:var(--text);border-color:var(--text);color:#0a0a0b;font-weight:600}
+.btn.solid:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{color:var(--muted)}
+.btn.ghost:hover{color:var(--text)}
+
+.rail{border-left:1px solid var(--line);padding-left:30px}
+.rail-t{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--dim);margin:0 0 16px;text-transform:uppercase}
+.rail ol{list-style:none;margin:0;padding:0}
+.rail li{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:baseline;
+  padding:8px 0;border-bottom:1px solid var(--line-2);font-size:13px;transition:.25s}
+.rail li:hover{padding-left:4px}
+.rail .n{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.06em}
+.rail .c{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.04em}
+.rail-note{margin:16px 0 0;font-size:11.5px;color:var(--dim);line-height:1.8}
+
+/* ---------- sections ---------- */
+section{position:relative;padding:104px 0}
+.sec-head{display:flex;align-items:baseline;gap:18px;border-top:1px solid var(--line);
+  padding-top:26px;margin-bottom:54px}
+.sec-head .num{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent)}
+.sec-head h2{font-family:var(--serif);font-size:clamp(1.6rem,2.9vw,2.35rem);font-weight:600;
+  margin:0;letter-spacing:.01em;line-height:1.3}
+.sec-head .en{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;
+  color:var(--dim);text-transform:uppercase;white-space:nowrap}
+.sub{font-family:var(--serif);font-size:1.28rem;font-weight:600;margin:70px 0 26px;letter-spacing:.01em}
+.note{color:var(--muted);font-size:.92rem;line-height:1.9;max-width:62ch;margin:34px 0 0;
+  padding-left:18px;border-left:1px solid var(--accent)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line)}
+.card{background:var(--bg);padding:32px 28px 30px;transition:background .3s}
+.card:hover{background:var(--panel)}
+.card .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;color:var(--accent)}
+.card h3{font-family:var(--serif);font-size:1.18rem;font-weight:600;margin:15px 0 9px;letter-spacing:.01em}
+.card p{margin:0;color:var(--muted);font-size:.89rem;line-height:1.85}
+.quote{font-family:var(--serif);font-size:clamp(1.15rem,2.1vw,1.5rem);line-height:1.8;
+  margin:64px 0 0;padding:0 0 0 26px;border-left:2px solid var(--accent);color:var(--text);
+  max-width:34em;letter-spacing:.01em}
+.quote small{display:block;margin-top:14px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+
+/* layers */
+.layers{display:grid;grid-template-columns:repeat(3,1fr);gap:44px}
+.layer{border-top:1px solid var(--line);padding-top:22px}
+.layer .idx{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--dim)}
+.layer h3{font-family:var(--serif);font-size:1.45rem;font-weight:600;margin:11px 0 4px}
+.layer .path{font-family:var(--mono);font-size:11.5px;color:var(--gold);letter-spacing:.02em}
+.layer p{color:var(--muted);font-size:.89rem;line-height:1.85;margin:14px 0 0}
+
+/* ladder */
+.ladder{list-style:none;display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0;padding:0}
+.rung{border:1px solid var(--line);padding:17px 15px 15px;transition:.3s var(--ease)}
+.rung:hover{border-color:rgba(240,234,223,.3)}
+.rung .rn{font-family:var(--mono);font-size:9.5px;color:var(--accent);letter-spacing:.1em}
+.rung b{display:block;font-family:var(--serif);font-size:1rem;font-weight:600;margin:9px 0 5px}
+.rung em{display:block;font-family:var(--mono);font-style:normal;font-size:9.5px;
+  color:var(--dim);line-height:1.75;word-break:break-word}
+.rung:last-child{border-color:rgba(208,90,65,.45)}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:296px 1fr;border:1px solid var(--line);background:var(--panel)}
+.pipe-list{border-right:1px solid var(--line)}
+.pipe-list button{display:grid;grid-template-columns:30px 1fr;gap:8px;width:100%;text-align:left;
+  background:none;border:0;border-bottom:1px solid var(--line-2);padding:13px 18px;color:var(--muted);
+  font:inherit;font-size:13px;cursor:pointer;transition:.22s;align-items:baseline}
+.pipe-list button:hover{color:var(--text);background:rgba(240,234,223,.022)}
+.pipe-list button[aria-selected="true"]{color:var(--text);background:rgba(208,90,65,.07);
+  box-shadow:inset 2px 0 0 var(--accent)}
+.pipe-list .pn{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.06em}
+.pipe-list button[aria-selected="true"] .pn{color:var(--accent)}
+.pipe-list .pc{display:block;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.06em;margin-top:2px}
+.pipe-panel{padding:42px 46px 40px;min-height:432px;display:flex;flex-direction:column;justify-content:center}
+.pp-head{display:flex;align-items:baseline;gap:18px;margin-bottom:30px}
+.pp-head .big{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.1em}
+.pp-head h3{font-family:var(--serif);font-size:1.9rem;font-weight:600;margin:0;letter-spacing:.01em;line-height:1.2}
+.pp-head .en{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--dim);margin-left:auto}
+.pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px 34px}
+.lbl{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dim);
+  text-transform:uppercase;margin-bottom:8px}
+.cmd{display:block;font-family:var(--mono);font-size:11.5px;line-height:1.8;color:var(--gold);
+  background:rgba(240,234,223,.035);border:1px solid var(--line-2);padding:10px 12px;
+  word-break:break-word;letter-spacing:.01em}
+.gate{font-size:.86rem;color:var(--muted);line-height:1.8;margin:0}
+.why{margin:32px 0 0;padding:18px 0 0;border-top:1px solid var(--line);color:var(--text);
+  font-family:var(--serif);font-size:1.02rem;line-height:1.85}
+.why::before{content:"“";color:var(--accent);font-size:1.3rem;margin-right:2px}
+
+/* trust rows */
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:56px 1.05fr 1.6fr;gap:34px;align-items:start;
+  padding:28px 0;border-bottom:1px solid var(--line);transition:.3s}
+.row:hover{background:linear-gradient(90deg,rgba(240,234,223,.02),transparent 70%)}
+.row .n{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em;padding-top:5px}
+.row h3{font-family:var(--serif);font-size:1.13rem;font-weight:600;margin:0;line-height:1.6}
+.row p{margin:0;color:var(--muted);font-size:.89rem;line-height:1.9}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);margin-top:62px}
+.stat{background:var(--bg);padding:26px 24px}
+.stat b{display:block;font-family:var(--serif);font-size:2.1rem;font-weight:600;line-height:1.1;letter-spacing:.01em}
+.stat span{display:block;margin-top:8px;font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+  color:var(--dim);text-transform:uppercase}
+
+/* stack */
+.stack{display:grid;grid-template-columns:1.08fr .92fr;gap:56px;align-items:start}
+.codewrap{position:relative}
+pre{margin:0;max-width:100%;background:var(--panel);border:1px solid var(--line);padding:26px 24px;overflow:auto;
+  font-family:var(--mono);font-size:12.2px;line-height:1.95;color:#cfc9c0;letter-spacing:.005em}
+pre code{font-family:inherit}
+.copy{position:absolute;top:10px;right:10px;z-index:2;background:var(--panel-2);color:var(--dim);
+  border:1px solid var(--line);font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  padding:5px 10px;cursor:pointer;transition:.25s}
+.copy:hover{color:var(--text);border-color:var(--accent)}
+.tech{list-style:none;margin:0;padding:0}
+.tech li{display:grid;grid-template-columns:120px 1fr;gap:20px;padding:16px 0;
+  border-bottom:1px solid var(--line-2);align-items:baseline}
+.tech b{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--gold);font-weight:400}
+.tech span{color:var(--muted);font-size:.89rem;line-height:1.8}
+
+/* start */
+.start{display:grid;grid-template-columns:.92fr 1.08fr;gap:56px;align-items:start}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{position:relative;padding:0 0 26px 44px;counter-increment:s}
+.steps li::before{content:"0" counter(s);position:absolute;left:0;top:1px;font-family:var(--mono);
+  font-size:10px;color:var(--accent);letter-spacing:.1em}
+.steps li::after{content:"";position:absolute;left:9px;top:22px;bottom:4px;width:1px;background:var(--line-2)}
+.steps li:last-child::after{display:none}
+.steps h4{font-family:var(--serif);font-size:1.06rem;font-weight:600;margin:0 0 6px}
+.steps p{margin:0;color:var(--muted);font-size:.88rem;line-height:1.85}
+.fine{color:var(--dim);font-size:.8rem;line-height:1.9;margin:8px 0 0}
+.links{display:flex;gap:28px;margin-top:56px;padding-top:26px;border-top:1px solid var(--line);
+  flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em}
+.links a{color:var(--muted);text-decoration:none;transition:color .25s}
+.links a:hover{color:var(--accent)}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:54px 0 66px;color:var(--dim);font-size:12px}
+.foot-grid{display:flex;justify-content:space-between;gap:36px;flex-wrap:wrap;align-items:flex-start}
+.legal{max-width:56ch;line-height:1.95;margin:0}
+.legal a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
+.legal a:hover{color:var(--text);border-color:var(--accent)}
+.foot-meta{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;line-height:2}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+.static .reveal{opacity:1;transform:none;transition:none}
+@media print{.reveal{opacity:1;transform:none}}
+
+/* responsive */
+@media (max-width:980px){
+  .hero{padding:150px 0 84px}
+  .hero-grid{grid-template-columns:1fr;gap:56px}
+  .rail{border-left:0;border-top:1px solid var(--line);padding:28px 0 0}
+  .rail ol{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}
+  .rail li{border-bottom:1px solid var(--line-2)}
+  .layers{grid-template-columns:1fr;gap:34px}
+  .ladder{grid-template-columns:repeat(3,1fr)}
+  .pipe{grid-template-columns:1fr}
+  .pipe-list{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr}
+  .pipe-panel{min-height:0;padding:34px 28px}
+  .pp-grid{grid-template-columns:1fr}
+  .stack,.start{grid-template-columns:1fr;gap:38px}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .row{grid-template-columns:40px 1fr;gap:8px 20px}
+  .row p{grid-column:2}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .navlinks{display:none}
+}
+@media (max-width:640px){
+  .wrap{width:calc(100% - 36px)}
+  section{padding:76px 0}
+  .cards{grid-template-columns:1fr}
+  .ladder{grid-template-columns:1fr 1fr}
+  .pipe-list{grid-template-columns:1fr}
+  .sec-head{flex-wrap:wrap;gap:10px 16px}
+  .sec-head .en{margin-left:0;width:100%}
+  .lede{font-size:.97rem}
+  .meta{gap:22px}
+  .tech li{grid-template-columns:1fr;gap:4px}
+}
+@media (max-width:480px){
+  .rail ol{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+  *{animation:none!important;transition:none!important}
+}
+</style>
+<script>
+  // ?static and prefers-reduced-motion render the page without entrance animation
+  if (location.search.indexOf('static') > -1 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.classList.add('static');
+  }
+</script>
+<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="seal">书</span>
+      <span><b>chinese-novel-to-game</b><i>n2g</i></span>
+    </a>
+    <div class="navlinks">
+      <a href="#purpose">用途</a>
+      <a href="#arch">架构</a>
+      <a href="#pipeline">流水线</a>
+      <a href="#trust">可信度</a>
+      <a href="#stack">技术栈</a>
+      <a href="#start">开始</a>
+    </div>
+    <a class="gh" href="https://github.com/NorwinYu/chinese-novel-to-game" target="_blank" rel="noopener">GITHUB ↗</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Open-source agent skill<span class="dot"></span>中文小说 → 可玩网页游戏</p>
+      <h1>把一本中文小说，<br><em>做成能玩的游戏。</em></h1>
+      <p class="lede">不是让模型一句话生成游戏，而是一条<strong>可核查的流水线</strong>：清洗切章、逐章抽取、人物归并、知识账本、分阶段角色卡、玩法模拟、3D 场景。每一环都有量化门槛与人工核对过的金标；<strong>NPC 只能知道自己当时知道的事</strong>。</p>
+      <div class="meta">
+        <div><b>10</b>个步骤</div>
+        <div><b>8</b>道门槛</div>
+        <div><b>38</b>个离线测试</div>
+        <div><b>MIT</b>许可</div>
+      </div>
+      <div class="cta">
+        <a class="btn solid" href="#start">快速开始 <span>→</span></a>
+        <a class="btn" href="#arch">看架构</a>
+        <a class="btn ghost" href="https://github.com/NorwinYu/chinese-novel-to-game" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+    </div>
+    <aside class="rail reveal" aria-label="流水线概览">
+      <p class="rail-t">Pipeline / 十个步骤</p>
+      <ol>
+        <li><span class="n">00</span><span>书型诊断</span><span class="c">profile</span></li>
+        <li><span class="n">01</span><span>清洗切章</span><span class="c">ingest</span></li>
+        <li><span class="n">02</span><span>逐章抽取</span><span class="c">extract</span></li>
+        <li><span class="n">03</span><span>全书归并</span><span class="c">characters</span></li>
+        <li><span class="n">05</span><span>知识账本</span><span class="c">ledger</span></li>
+        <li><span class="n">04</span><span>角色档案</span><span class="c">cards</span></li>
+        <li><span class="n">06</span><span>游戏化</span><span class="c">game</span></li>
+        <li><span class="n">06b</span><span>玩法设计</span><span class="c">design</span></li>
+        <li><span class="n">07</span><span>画面</span><span class="c">looks</span></li>
+        <li><span class="n">08</span><span>验收</span><span class="c">probe</span></li>
+      </ol>
+      <p class="rail-note">⑤ 账本排在 ④ 角色卡之前：卡依赖“谁在场、谁知道”。</p>
+    </aside>
+  </div>
+</header>
+
+<main>
+
+<section id="purpose">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="num">01</span><h2>它产出什么</h2><span class="en">What it makes</span>
+    </div>
+    <div class="cards">
+      <article class="card reveal">
+        <span class="k">01 / READ</span>
+        <h3>正史回放</h3>
+        <p>按账本里的场景逐场读原文，对白标注说话人，场景切换带动 3D 画面与节点地图。主线始终是原著。</p>
+      </article>
+      <article class="card reveal">
+        <span class="k">02 / CHOICE</span>
+        <h3>关键处抉择</h3>
+        <p>每个锚点停一次。原著做法是 canon，其余是处境下合理的别的做法，各有得失、后果旁白，再用一段 bridge 接回原著。</p>
+      </article>
+      <article class="card reveal">
+        <span class="k">03 / MANAGE</span>
+        <h3>用书里的单位经营</h3>
+        <p>2–4 个属性、一个阶段目标、每章末的空闲行动、明确的失败结局。钱就写书里的钱数，不用 0–100 的空泛评分。</p>
+      </article>
+      <article class="card reveal">
+        <span class="k">04 / INTEL</span>
+        <h3>说出口才算情报</h3>
+        <p>找 NPC 打听，对方真的把要点说出来才解锁之后某个抉择里更好的选项；吊胃口、卖关子不算。</p>
+      </article>
+      <article class="card reveal">
+        <span class="k">05 / TALK</span>
+        <h3>有边界的角色</h3>
+        <p>人设来自上一个已结束阶段的角色卡，记忆来自账本，回答里出现玩家没提、且更晚才登场的名字会被打回。</p>
+      </article>
+      <article class="card reveal">
+        <span class="k">06 / LOOK</span>
+        <h3>离线可用的 3D</h3>
+        <p>three.js 低多边形实时渲染：人物有心情与姿势，地点按参数生成，锚点有定格。AI 图是可选增强，不是前提。</p>
+      </article>
+    </div>
+    <blockquote class="quote reveal">
+      游戏的主线始终是原著；玩家走偏时，由旁白把他接回下一场。
+      <small>Soft regression</small>
+    </blockquote>
+  </div>
+</section>
+
+<section id="arch">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="num">02</span><h2>三层分工</h2><span class="en">Architecture</span>
+    </div>
+    <div class="layers">
+      <div class="layer reveal">
+        <span class="idx">LAYER 01</span>
+        <h3>框架</h3>
+        <code class="path">n2g/</code>
+        <p>只放对所有中文小说都成立的机制：编码识别、切章、抽取提示词与校验、人物归并、知识账本、角色卡、引擎、NPC 运行时、3D 渲染、门槛。<strong>不含任何一本书的词、名或阈值。</strong></p>
+      </div>
+      <div class="layer reveal">
+        <span class="idx">LAYER 02</span>
+        <h3>每一本书</h3>
+        <code class="path">games/&lt;slug&gt;/</code>
+        <p>书型、词表、噪声 / 合并 / 知情 / 地点四类规则、抽取说明、插件、人工金标、笔记；<code>build/</code> 下是全部产物，可随时重建。</p>
+      </div>
+      <div class="layer reveal">
+        <span class="idx">LAYER 03</span>
+        <h3>作业手册</h3>
+        <code class="path">SKILL.md + stage*.md</code>
+        <p>九份阶段说明与一份问题模式库：每阶段怎么跑、看哪个指标、抽查什么、遇到问题修在哪一层。智能体照它干活，人照它验收。</p>
+      </div>
+    </div>
+
+    <h3 class="sub reveal">修复落点：从上往下找第一个能解决的位置</h3>
+    <ol class="ladder">
+      <li class="rung reveal"><span class="rn">1</span><b>书型</b><em>profile</em></li>
+      <li class="rung reveal"><span class="rn">2</span><b>词表</b><em>vocab.json</em></li>
+      <li class="rung reveal"><span class="rn">3</span><b>规则</b><em>noise / merge /<br>knowledge / place</em></li>
+      <li class="rung reveal"><span class="rn">4</span><b>抽取说明</b><em>extract_guide.md</em></li>
+      <li class="rung reveal"><span class="rn">5</span><b>插件</b><em>plugins/*.py</em></li>
+      <li class="rung reveal"><span class="rn">6</span><b>框架</b><em>n2g/</em></li>
+    </ol>
+    <p class="note reveal">同一个问题，先判断它属于哪一层，写在最上面能解决它的地方。框架层只有在<strong>两本以上</strong>的书里都遇到、并且能用通用规则解决时才改；改完在所有书上回归。</p>
+  </div>
+</section>
+
+<section id="pipeline">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="num">03</span><h2>流水线</h2><span class="en">Pipeline · 点开看每一步</span>
+    </div>
+    <div class="pipe reveal">
+      <div class="pipe-list" role="tablist" aria-label="流水线步骤" id="pipeList"></div>
+      <div class="pipe-panel" id="pipePanel" role="tabpanel" aria-live="polite"></div>
+    </div>
+    <p class="note reveal">每一步都先看指标再过门槛。<code>gate</code> 记录指标与该阶段输入的哈希；改了规则或代码，<code>status</code> 会把受影响的阶段标成 stale——旧的“通过”不算数。</p>
+  </div>
+</section>
+
+<section id="trust">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="num">04</span><h2>为什么可信</h2><span class="en">Why trust it</span>
+    </div>
+    <div class="rows">
+      <div class="row reveal">
+        <span class="n">01</span><h3>证据优先</h3>
+        <p>实体名必须在本章原文出现；每条事实附逐字引文；每个引号必须有说话人。不满足就退回模型重做，三轮不过标 <code>unverified</code>，下游（账本、角色卡、NPC 记忆）不当证据用。</p>
+      </div>
+      <div class="row reveal">
+        <span class="n">02</span><h3>门槛 · 金标 · 过期指纹</h3>
+        <p>八道门槛各有量化指标；金标是人工对照原文确认过的判断（这句谁说的、是不是同一个人、某章在不在场），每次重建自动复查。改了东西，过期检测告诉你哪一步要重跑。</p>
+      </div>
+      <div class="row reveal">
+        <span class="n">03</span><h3>分层修复</h3>
+        <p>六个落点，从上往下找第一个能解决的。写进框架的修复会污染所有书，所以框架层要两本书都遇到才动，动完全量回归。</p>
+      </div>
+      <div class="row reveal">
+        <span class="n">04</span><h3>通用性由测试强制</h3>
+        <p>一个守卫测试拿每本书的 S/A 级人名、别名、常用地点，反向扫描框架、测试和文档——往框架里写某本书的词，测试会当场失败。</p>
+      </div>
+      <div class="row reveal">
+        <span class="n">05</span><h3>玩法可验证</h3>
+        <p>模拟器与网页共用同一个引擎，跑三类玩家：永远选原著（必须活到最后）、按权重规划（必须能赢）、随机（必须可能输）。数值不对就让模型改，最多三轮，留最好的一版。</p>
+      </div>
+      <div class="row reveal">
+        <span class="n">06</span><h3>可见性约束</h3>
+        <p>NPC 回答前只给四样东西：已结束阶段的角色卡、账本里他此刻知道的事、当前场景与玩家已读原文、玩法层的好感与情报。回答后再拦一次“未来名字”。</p>
+      </div>
+    </div>
+    <div class="stats reveal">
+      <div class="stat"><b>10</b><span>Steps</span></div>
+      <div class="stat"><b>8</b><span>Gates</span></div>
+      <div class="stat"><b>38</b><span>Offline tests</span></div>
+      <div class="stat"><b>6</b><span>Fix layers</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="num">05</span><h2>技术栈与仓库</h2><span class="en">Stack</span>
+    </div>
+    <div class="stack">
+      <div class="codewrap reveal">
+        <button class="copy" data-copy>复制</button>
+<pre><code>chinese-novel-to-game/
+├── SKILL.md              agent 入口：原则、落点表、阶段总览
+├── stage0…stage8*.md     9 份阶段手册
+├── patterns.md           问题模式库
+├── NOTICE.md             法律声明
+├── n2g/                  框架，42 个 .py
+│   ├── text/             清洗 · 切章 · 引号 · 噪声
+│   ├── extract/          逐章抽取与校验
+│   ├── consolidate/      人物归并 · 分词词典
+│   ├── knowledge/        角色卡 · 账本 · 地点
+│   ├── game/             引擎 · NPC · 设计 · 模拟 · 3D
+│   └── art/              可选：AI 图
+├── tests/                38 个离线测试
+└── examples/             自写 5 章示例（CC0）</code></pre>
+      </div>
+      <ul class="tech">
+        <li class="reveal"><b>Python 3</b><span>纯标准库 + 少量依赖；在 3.13 上验证，无数据库、无消息队列，全部是文件。</span></li>
+        <li class="reveal"><b>httpx</b><span>异步客户端：磁盘缓存、重试、单次运行预算上限、JSON 修复。密钥只从环境变量读。</span></li>
+        <li class="reveal"><b>FastAPI</b><span>本地服务只监听 127.0.0.1；存档在服务端，刷新不丢。</span></li>
+        <li class="reveal"><b>jieba</b><span>分词与每本书的自定义词典，用于人物归并和记忆检索。</span></li>
+        <li class="reveal"><b>three.js</b><span>随仓库附带，无 CDN、可离线；所有外观都是枚举参数，校验器把不认识的值换成默认并记录。</span></li>
+        <li class="reveal"><b>BM25</b><span>NPC 记忆默认用 BM25 + 本书词典排序；可选本地句向量，缺省下完全可用。</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="num">06</span><h2>快速开始</h2><span class="en">Get started</span>
+    </div>
+    <div class="start">
+      <div class="reveal">
+        <ol class="steps">
+          <li><h4>装好环境</h4><p>克隆、虚拟环境、依赖，然后把密钥写进 <code>.env</code>。任何 OpenAI 兼容的接口都可以。</p></li>
+          <li><h4>先用示例跑通 ⓪①</h4><p>仓库自带 5 章自写文本，清洗、切章、书型诊断都不调用模型，不花钱。</p></li>
+          <li><h4>换成你的书</h4><p>长篇先做切片：在 <code>book.json</code> 写 <code>"pilot": "0:30"</code>，只在 20–30 章上走通全流程，估好费用再放开。</p></li>
+          <li><h4>玩</h4><p><code>python -m n2g play --slug demo</code>，浏览器打开 127.0.0.1:8765。</p></li>
+        </ol>
+        <p class="fine">测试全部离线，不读 <code>.env</code>，不需要模型：<code>pytest -q</code>。</p>
+      </div>
+      <div class="codewrap reveal">
+        <button class="copy" data-copy>复制</button>
+<pre><code>git clone https://github.com/NorwinYu/chinese-novel-to-game.git
+cd chinese-novel-to-game
+python3 -m venv .venv &amp;&amp; . .venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env       # 填 base_url / api_key / model
+
+python -m n2g init examples/demo-novel.txt --slug demo --title 示例
+python -m n2g ingest  --slug demo
+python -m n2g profile --slug demo
+
+# 之后按阶段往下，每步先过门槛
+python -m n2g extract   --slug demo --chapters 0:30 --budget 1
+python -m n2g gate extract --slug demo</code></pre>
+      </div>
+    </div>
+    <div class="links reveal">
+      <a href="https://github.com/NorwinYu/chinese-novel-to-game" target="_blank" rel="noopener">GitHub ↗</a>
+      <a href="https://github.com/NorwinYu/chinese-novel-to-game/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      <a href="https://github.com/NorwinYu/chinese-novel-to-game/blob/main/SKILL.md" target="_blank" rel="noopener">SKILL.md</a>
+      <a href="https://github.com/NorwinYu/chinese-novel-to-game/blob/main/patterns.md" target="_blank" rel="noopener">patterns.md</a>
+      <a href="https://github.com/NorwinYu/chinese-novel-to-game/blob/main/NOTICE.md" target="_blank" rel="noopener">NOTICE.md</a>
+      <a href="https://github.com/NorwinYu/chinese-novel-to-game/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-grid">
+    <p class="legal">这是一个<strong>技术研究项目</strong>：研究的是文本处理与受约束的生成流程，不针对任何具体作品。仓库不含任何受版权保护的小说原文、角色设定、插图或语料；示例文本为自写原创（CC0）。请只处理你有权使用的文本。<a href="https://github.com/NorwinYu/chinese-novel-to-game/blob/main/NOTICE.md" target="_blank" rel="noopener">完整法律声明 →</a></p>
+    <div class="foot-meta">chinese-novel-to-game<br>MIT · 2026</div>
+  </div>
+</footer>
+
+<script>
+const STAGES = [
+  {n:"00", name:"书型诊断", en:"PROFILE", cmd:"python -m n2g profile --slug S", out:"book.json → profile",
+   gate:"无自动门槛：每个建议值抽样核对原文", why:"人称或引号判错，后面整批抽取返工。"},
+  {n:"01", name:"清洗切章", en:"INGEST", cmd:"python -m n2g ingest --slug S", out:"build/chapters.jsonl",
+   gate:"章节数可解释 · 噪声残留 0 · 编号审计", why:"宁可留下噪声，也不删正文；删掉的正文不可逆。"},
+  {n:"02", name:"逐章抽取", en:"EXTRACT", cmd:"python -m n2g extract --slug S --chapters 0:30", out:"build/extract/*.json",
+   gate:"覆盖 1 · 句式不一致 ≤2% · unverified ≤2%", why:"每条事实必须能逐字回到原文，否则退回重做。"},
+  {n:"03", name:"全书归并", en:"CONSOLIDATE", cmd:"python -m n2g characters / lexicon / places", out:"characters.json · userdict.txt · places.json",
+   gate:"有 S 级 · 找到主角 · 金标全过", why:"同一个人不同称呼、不同人同一称呼，都在这里分开。"},
+  {n:"05", name:"知识账本", en:"LEDGER", cmd:"python -m n2g ledger --slug S", out:"build/ledger.json",
+   gate:"witness_not_present ≤5%", why:"账本是 NPC 记忆的唯一来源，不调模型，几秒重建。"},
+  {n:"04", name:"角色档案", en:"CARDS", cmd:"python -m n2g cards --slug S --tiers S", out:"build/cards/<id>.json",
+   gate:"覆盖 1 · 待重写 0 · 无剧透", why:"每个剧情阶段一张卡，卡描述的是阶段末尾的状态。"},
+  {n:"06", name:"游戏化", en:"GAME", cmd:"python -m n2g game --slug S", out:"build/game.json",
+   gate:"node_coverage ≥0.5 · play_share ≥0.3 · anchors ≥3", why:"原著是主线；玩家走偏时，旁白把他接回下一场。"},
+  {n:"06b", name:"玩法设计", en:"DESIGN", cmd:"python -m n2g design --slug S --budget 0.2", out:"build/design.json · sim_report.json",
+   gate:"canon_survives · win_reachable · lose_reachable", why:"照原著走必须活到最后；会玩的人必须能赢；乱玩必须可能输。"},
+  {n:"07", name:"画面", en:"LOOKS", cmd:"python -m n2g looks --slug S", out:"build/looks.json（+ 可选 PNG）",
+   gate:"枚举校验器：不认识的值换默认并记录", why:"默认 low-poly 3D，离线可用；图像服务只是可选增强。"},
+  {n:"08", name:"验收", en:"ACCEPT", cmd:"python -m n2g probe --slug S --budget 0.1", out:"build/probe_report.json",
+   gate:"探针全过 · 人工实玩一遍", why:"剧透探针问未来，记忆探针问过去；最后自己下场玩。"}
+];
+
+const list = document.getElementById('pipeList');
+const panel = document.getElementById('pipePanel');
+STAGES.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.setAttribute('role', 'tab');
+  b.setAttribute('aria-selected', i === 2 ? 'true' : 'false');
+  b.id = 'tab-' + i;
+  b.innerHTML = '<span class="pn">' + s.n + '</span><span>' + s.name +
+    '<span class="pc">' + s.en + '</span></span>';
+  b.addEventListener('click', () => select(i));
+  b.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); select((i + 1) % STAGES.length); }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); select((i - 1 + STAGES.length) % STAGES.length); }
+  });
+  list.appendChild(b);
+});
+
+function select(i) {
+  const s = STAGES[i];
+  [...list.children].forEach((b, j) => b.setAttribute('aria-selected', j === i ? 'true' : 'false'));
+  panel.setAttribute('aria-labelledby', 'tab-' + i);
+  panel.innerHTML =
+    '<div class="pp-head"><span class="big">' + s.n + '</span><h3>' + s.name +
+      '</h3><span class="en">' + s.en + '</span></div>' +
+    '<div class="pp-grid">' +
+      '<div><span class="lbl">命令</span><code class="cmd">' + s.cmd + '</code></div>' +
+      '<div><span class="lbl">产物</span><code class="cmd">' + s.out + '</code></div>' +
+      '<div style="grid-column:1/-1"><span class="lbl">门槛</span><p class="gate">' + s.gate + '</p></div>' +
+    '</div>' +
+    '<p class="why">' + s.why + '</p>';
+  if (!document.documentElement.classList.contains('static') && panel.animate) {
+    panel.animate([{opacity: .35}, {opacity: 1}], {duration: 320, easing: 'ease-out'});
+  }
+}
+select(2);
+
+document.querySelectorAll('[data-copy]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const code = btn.closest('.codewrap').querySelector('code').innerText;
+    try { await navigator.clipboard.writeText(code); }
+    catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = code; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+    const old = btn.textContent; btn.textContent = '已复制';
+    setTimeout(() => { btn.textContent = old; }, 1400);
+  });
+});
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, {rootMargin: '0px 0px -6% 0px', threshold: .06});
+document.querySelectorAll('.reveal').forEach((el, i) => {
+  el.style.transitionDelay = ((i % 4) * 55) + 'ms';
+  io.observe(el);
+});
+setTimeout(() => document.querySelectorAll('.reveal:not(.in)').forEach(el => el.classList.add('in')), 1600);
+
+const links = [...document.querySelectorAll('.navlinks a')];
+const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const nav = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  });
+}, {rootMargin: '-42% 0px -52% 0px'});
+secs.forEach(s => nav.observe(s));
+</script>
+</body>
+</html>

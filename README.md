@@ -7,6 +7,8 @@ Turn a Chinese novel (TXT) into a playable, self-hosted web game.
 
 仓库**不包含任何小说原文或改编产物**，只包含框架代码、给智能体用的作业手册，以及一段自写的示例文本。**请只使用你有权使用的文本**：这是技术研究项目，不提供、也不协助获取受版权保护的作品；完整条款见 [NOTICE.md](NOTICE.md)。
 
+介绍页（架构与流水线图解）：<https://norwinyu.github.io/chinese-novel-to-game/>
+
 ---
 
 ## 它能做出什么
@@ -22,7 +24,7 @@ Turn a Chinese novel (TXT) into a playable, self-hosted web game.
 ## 快速开始
 
 ```bash
-git clone <this-repo> chinese-novel-to-game
+git clone https://github.com/NorwinYu/chinese-novel-to-game.git
 cd chinese-novel-to-game
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
