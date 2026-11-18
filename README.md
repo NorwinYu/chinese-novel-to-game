@@ -192,6 +192,7 @@ build/probe_report.json
 │   │   └── static/          # 前端（three.js 随仓库附带）
 │   └── art/                 # 可选：AI 图
 ├── tests/                   # 38 个离线测试（没有书时其中 1 个自动跳过）
+├── docs/                    # 介绍页与架构总图（GitHub Pages）
 ├── examples/demo-novel.txt  # 自写的 5 章示例（CC0）
 ├── requirements.txt
 └── .env.example
