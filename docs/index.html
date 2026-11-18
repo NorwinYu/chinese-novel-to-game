@@ -197,29 +197,23 @@ section{position:relative;padding:104px 0}
 /* stats */
 /* architecture map */
 .mapwrap{padding:6px 0 0;overflow-x:auto}
-.map{display:block;width:100%;height:auto;min-width:1000px}
-.map .zbox{fill:rgba(240,234,223,.012);stroke:var(--line)}
-.map .zra{fill:none;stroke:var(--line);stroke-dasharray:3 4}
-.map .zn{fill:rgba(240,234,223,.022);stroke:rgba(240,234,223,.16)}
-.map .zn.api{stroke:rgba(208,90,65,.42);fill:rgba(208,90,65,.045)}
-.map .zn.ext{stroke:rgba(240,234,223,.22);stroke-dasharray:4 4;fill:transparent}
-.map .zt{font-family:var(--mono);font-size:10px;letter-spacing:.18em;fill:var(--dim)}
-.map .zts{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;fill:#645f59}
-.map .nm{font-family:var(--serif);font-size:15.5px;fill:var(--text)}
-.map .nm2{font-family:var(--serif);font-size:12.5px;fill:var(--text)}
-.map .num{font-family:var(--mono);font-size:9.5px;fill:var(--accent);letter-spacing:.1em}
-.map .sub{font-family:var(--mono);font-size:8.2px;fill:#8a847b;letter-spacing:.01em}
-.map .sub2{font-family:var(--mono);font-size:8.4px;fill:#9a948b}
-.map .sub3{font-family:var(--mono);font-size:8.6px;fill:#b3ada3}
-.map .lbl{font-family:var(--sans);font-size:9.5px;fill:var(--dim)}
-.map .arr{stroke:rgba(240,234,223,.26);fill:none;stroke-width:1}
-.map .arrd{stroke:rgba(208,90,65,.42);fill:none;stroke-width:1;stroke-dasharray:3 3}
-.map .foot{font-family:var(--sans);font-size:9px;fill:#645f59}
+.map-img{display:block;width:100%;height:auto;min-width:1000px;border:1px solid var(--line);border-radius:3px}
 .maphint{display:none;margin:10px 0 0;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--dim)}
 @media (max-width:1020px){
   .maphint{display:block}
   .mapwrap{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
 }
+
+/* trust rows */
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:56px 1.05fr 1.6fr;gap:34px;align-items:start;
+  padding:28px 0;border-bottom:1px solid var(--line);transition:.3s}
+.row:hover{background:linear-gradient(90deg,rgba(240,234,223,.02),transparent 70%)}
+.row .n{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em;padding-top:5px}
+.row h3{font-family:var(--serif);font-size:1.13rem;font-weight:600;margin:0;line-height:1.6}
+.row p{margin:0;color:var(--muted);font-size:.89rem;line-height:1.9}
+
+/* stats */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
   border:1px solid var(--line);margin-top:62px}
 .stat{background:var(--bg);padding:26px 24px}
@@ -473,170 +467,7 @@ footer{border-top:1px solid var(--line);padding:54px 0 66px;color:var(--dim);fon
       <span class="num">03</span><h2>架构总图</h2><span class="en">Architecture map</span>
     </div>
     <div class="mapwrap reveal">
-<svg class="map" viewBox="0 0 1160 840" role="img" aria-label="技术架构总图">
-<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="rgba(240,234,223,.4)"/></marker><marker id="ahd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="rgba(208,90,65,.55)"/></marker></defs>
-<rect class="zbox" x="24" y="16" width="1112" height="82" rx="2"/>
-<text class="zt" x="40" y="40" text-anchor="start">控制面 / CONTROL</text>
-<text class="zts" x="1120" y="40" text-anchor="end">人 · 智能体 · 命令</text>
-<rect class="zn" x="40" y="46" width="300" height="38" rx="2"/>
-<text class="nm2" x="52" y="63" text-anchor="start">作业手册</text>
-<text class="sub" x="52" y="77" text-anchor="start">SKILL.md · stage0–8 · patterns.md</text>
-<polyline class="arr" points="342,65 354,65" marker-end="url(#ah)"/>
-<rect class="zn" x="360" y="46" width="250" height="38" rx="2"/>
-<text class="nm2" x="372" y="63" text-anchor="start">命令行入口</text>
-<text class="sub" x="372" y="77" text-anchor="start">python -m n2g &lt;cmd&gt; · 35 个命令</text>
-<polyline class="arr" points="612,65 624,65" marker-end="url(#ah)"/>
-<rect class="zn" x="630" y="46" width="250" height="38" rx="2"/>
-<text class="nm2" x="642" y="63" text-anchor="start">每本书的规则</text>
-<text class="sub" x="642" y="77" text-anchor="start">games/&lt;slug&gt;/ · 词表 · 插件</text>
-<polyline class="arr" points="882,65 894,65" marker-end="url(#ah)"/>
-<rect class="zn" x="900" y="46" width="212" height="38" rx="2"/>
-<text class="nm2" x="912" y="63" text-anchor="start">质量环</text>
-<text class="sub" x="912" y="77" text-anchor="start">gate · golden · status</text>
-<polyline class="arrd" points="144,84 144,110" marker-end="url(#ahd)"/>
-<text class="lbl" x="154" y="103" text-anchor="start">按阶段推进，每步先过门槛</text>
-<rect class="zbox" x="24" y="116" width="1112" height="320" rx="2"/>
-<text class="zt" x="40" y="140" text-anchor="start">批处理 / BATCH</text>
-<text class="zts" x="1120" y="140" text-anchor="end">离线 · 可重跑 · 实心点 = 调用模型计费</text>
-<rect class="zra" x="44" y="148" width="152" height="252" rx="2"/>
-<text class="zt" x="58" y="170" text-anchor="start">输入</text>
-<text class="sub2" x="58" y="192" text-anchor="start">小说 TXT</text>
-<text class="sub2" x="58" y="210" text-anchor="start">book.json</text>
-<text class="sub2" x="58" y="228" text-anchor="start">vocab.json</text>
-<text class="sub2" x="58" y="246" text-anchor="start">noise_rules.json</text>
-<text class="sub2" x="58" y="264" text-anchor="start">merge_rules.json</text>
-<text class="sub2" x="58" y="282" text-anchor="start">knowledge_rules.json</text>
-<text class="sub2" x="58" y="300" text-anchor="start">place_rules.json</text>
-<text class="sub2" x="58" y="318" text-anchor="start">plugins/</text>
-<text class="sub2" x="58" y="336" text-anchor="start">extract_guide.md</text>
-<text class="sub2" x="58" y="354" text-anchor="start">golden.jsonl</text>
-<text class="sub2" x="58" y="372" text-anchor="start">notes.md</text>
-<polyline class="arr" points="196,210 214,210" marker-end="url(#ah)"/>
-<rect class="zn" x="220" y="172" width="150" height="86" rx="2"/>
-<text class="num" x="234" y="195" text-anchor="start">00</text>
-<circle cx="356" cy="192" r="2.4" fill="none" stroke="#7e7870"/>
-<text class="nm" x="234" y="221" text-anchor="start">书型诊断</text>
-<text class="sub" x="234" y="241" text-anchor="start">profile → book.json</text>
-<rect class="zn" x="396" y="172" width="150" height="86" rx="2"/>
-<text class="num" x="410" y="195" text-anchor="start">01</text>
-<circle cx="532" cy="192" r="2.4" fill="none" stroke="#7e7870"/>
-<text class="nm" x="410" y="221" text-anchor="start">清洗切章</text>
-<text class="sub" x="410" y="241" text-anchor="start">ingest → chapters.jsonl</text>
-<rect class="zn api" x="572" y="172" width="150" height="86" rx="2"/>
-<text class="num" x="586" y="195" text-anchor="start">02</text>
-<circle cx="708" cy="192" r="2.6" fill="#d05a41"/>
-<text class="nm" x="586" y="221" text-anchor="start">逐章抽取</text>
-<text class="sub" x="586" y="241" text-anchor="start">extract → extract/*.json</text>
-<rect class="zn api" x="748" y="172" width="150" height="86" rx="2"/>
-<text class="num" x="762" y="195" text-anchor="start">03</text>
-<circle cx="884" cy="192" r="2.6" fill="#d05a41"/>
-<text class="nm" x="762" y="221" text-anchor="start">全书归并</text>
-<text class="sub" x="762" y="241" text-anchor="start">characters → characters.json</text>
-<rect class="zn" x="924" y="172" width="150" height="86" rx="2"/>
-<text class="num" x="938" y="195" text-anchor="start">05</text>
-<circle cx="1060" cy="192" r="2.4" fill="none" stroke="#7e7870"/>
-<text class="nm" x="938" y="221" text-anchor="start">知识账本</text>
-<text class="sub" x="938" y="241" text-anchor="start">ledger → ledger.json</text>
-<rect class="zn api" x="220" y="318" width="150" height="86" rx="2"/>
-<text class="num" x="234" y="341" text-anchor="start">04</text>
-<circle cx="356" cy="338" r="2.6" fill="#d05a41"/>
-<text class="nm" x="234" y="367" text-anchor="start">角色档案</text>
-<text class="sub" x="234" y="387" text-anchor="start">cards → cards/&lt;id&gt;.json</text>
-<rect class="zn" x="396" y="318" width="150" height="86" rx="2"/>
-<text class="num" x="410" y="341" text-anchor="start">06</text>
-<circle cx="532" cy="338" r="2.4" fill="none" stroke="#7e7870"/>
-<text class="nm" x="410" y="367" text-anchor="start">游戏化</text>
-<text class="sub" x="410" y="387" text-anchor="start">game → game.json</text>
-<rect class="zn api" x="572" y="318" width="150" height="86" rx="2"/>
-<text class="num" x="586" y="341" text-anchor="start">06b</text>
-<circle cx="708" cy="338" r="2.6" fill="#d05a41"/>
-<text class="nm" x="586" y="367" text-anchor="start">玩法设计</text>
-<text class="sub" x="586" y="387" text-anchor="start">design → design.json</text>
-<rect class="zn api" x="748" y="318" width="150" height="86" rx="2"/>
-<text class="num" x="762" y="341" text-anchor="start">07</text>
-<circle cx="884" cy="338" r="2.6" fill="#d05a41"/>
-<text class="nm" x="762" y="367" text-anchor="start">画面</text>
-<text class="sub" x="762" y="387" text-anchor="start">looks → looks.json</text>
-<rect class="zn api" x="924" y="318" width="150" height="86" rx="2"/>
-<text class="num" x="938" y="341" text-anchor="start">08</text>
-<circle cx="1060" cy="338" r="2.6" fill="#d05a41"/>
-<text class="nm" x="938" y="367" text-anchor="start">验收</text>
-<text class="sub" x="938" y="387" text-anchor="start">probe → probe_report.json</text>
-<polyline class="arr" points="372,215 390,215" marker-end="url(#ah)"/>
-<polyline class="arr" points="372,361 390,361" marker-end="url(#ah)"/>
-<polyline class="arr" points="548,215 566,215" marker-end="url(#ah)"/>
-<polyline class="arr" points="548,361 566,361" marker-end="url(#ah)"/>
-<polyline class="arr" points="724,215 742,215" marker-end="url(#ah)"/>
-<polyline class="arr" points="724,361 742,361" marker-end="url(#ah)"/>
-<polyline class="arr" points="900,215 918,215" marker-end="url(#ah)"/>
-<polyline class="arr" points="900,361 918,361" marker-end="url(#ah)"/>
-<polyline class="arr" points="999,258 999,288 295,288 295,312" marker-end="url(#ah)"/>
-<rect class="zbox" x="24" y="456" width="1112" height="96" rx="2"/>
-<text class="zt" x="40" y="480" text-anchor="start">产物 / ARTIFACTS</text>
-<text class="zts" x="1120" y="480" text-anchor="end">全部落在 games/&lt;slug&gt;/build/，可随时重建</text>
-<rect class="zn" x="44" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="96.0" y="518" text-anchor="middle">chapters.jsonl</text>
-<polyline class="arr" points="151,513 160,513" marker-end="url(#ah)"/>
-<rect class="zn" x="164" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="216.0" y="518" text-anchor="middle">extract/*.json</text>
-<polyline class="arr" points="271,513 280,513" marker-end="url(#ah)"/>
-<rect class="zn" x="284" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="336.0" y="518" text-anchor="middle">characters.json</text>
-<polyline class="arr" points="391,513 400,513" marker-end="url(#ah)"/>
-<rect class="zn" x="404" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="456.0" y="518" text-anchor="middle">ledger.json</text>
-<polyline class="arr" points="511,513 520,513" marker-end="url(#ah)"/>
-<rect class="zn" x="524" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="576.0" y="518" text-anchor="middle">cards/*.json</text>
-<polyline class="arr" points="631,513 640,513" marker-end="url(#ah)"/>
-<rect class="zn" x="644" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="696.0" y="518" text-anchor="middle">game.json</text>
-<polyline class="arr" points="751,513 760,513" marker-end="url(#ah)"/>
-<rect class="zn" x="764" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="816.0" y="518" text-anchor="middle">design.json</text>
-<polyline class="arr" points="871,513 880,513" marker-end="url(#ah)"/>
-<rect class="zn" x="884" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="936.0" y="518" text-anchor="middle">looks.json</text>
-<polyline class="arr" points="991,513 1000,513" marker-end="url(#ah)"/>
-<rect class="zn" x="1004" y="494" width="104" height="38" rx="2"/>
-<text class="sub3" x="1056.0" y="518" text-anchor="middle">probe_report.json</text>
-<rect class="zbox" x="24" y="572" width="1112" height="214" rx="2"/>
-<text class="zt" x="40" y="596" text-anchor="start">运行时 / RUNTIME</text>
-<text class="zts" x="1120" y="596" text-anchor="end">本地服务 · 运行时只有对话调模型</text>
-<polyline class="arrd" points="580,552 580,566" marker-end="url(#ahd)"/>
-<text class="lbl" x="590" y="564" text-anchor="start">运行时读取产物</text>
-<rect class="zn" x="44" y="614" width="110" height="54" rx="2"/>
-<text class="nm2" x="58" y="635" text-anchor="start">玩家</text>
-<text class="sub" x="58" y="653" text-anchor="start">浏览器</text>
-<rect class="zn" x="174" y="614" width="170" height="54" rx="2"/>
-<text class="nm2" x="188" y="635" text-anchor="start">n2g play</text>
-<text class="sub" x="188" y="653" text-anchor="start">FastAPI · 状态在服务端</text>
-<rect class="zn" x="364" y="614" width="170" height="54" rx="2"/>
-<text class="nm2" x="378" y="635" text-anchor="start">engine.py</text>
-<text class="sub" x="378" y="653" text-anchor="start">同一套规则给模拟器</text>
-<rect class="zn" x="554" y="614" width="200" height="54" rx="2"/>
-<text class="nm2" x="568" y="635" text-anchor="start">index.html + scene.js</text>
-<text class="sub" x="568" y="653" text-anchor="start">three.js · 3D 场景</text>
-<rect class="zn" x="44" y="714" width="300" height="54" rx="2"/>
-<text class="nm2" x="58" y="735" text-anchor="start">上下文</text>
-<text class="sub" x="58" y="753" text-anchor="start">ledger · cards · BM25 · 场景</text>
-<rect class="zn" x="364" y="714" width="170" height="54" rx="2"/>
-<text class="nm2" x="378" y="735" text-anchor="start">npc.py</text>
-<text class="sub" x="378" y="753" text-anchor="start">只给模型他看得见的</text>
-<rect class="zn ext" x="554" y="714" width="200" height="54" rx="2"/>
-<text class="nm2" x="568" y="735" text-anchor="start">LLM 网关</text>
-<text class="sub" x="568" y="753" text-anchor="start">OpenAI 兼容 · 按对话计</text>
-<rect class="zn ext" x="774" y="714" width="230" height="54" rx="2"/>
-<text class="nm2" x="788" y="735" text-anchor="start">本地图像服务（可选）</text>
-<text class="sub" x="788" y="753" text-anchor="start">只给 ⑦ 出图，不占文本额度</text>
-<polyline class="arr" points="154,641 168,641" marker-end="url(#ah)"/>
-<polyline class="arr" points="344,641 358,641" marker-end="url(#ah)"/>
-<polyline class="arr" points="534,641 548,641" marker-end="url(#ah)"/>
-<polyline class="arr" points="259,668 259,692 449,692 449,708" marker-end="url(#ah)"/>
-<polyline class="arr" points="344,741 358,741" marker-end="url(#ah)"/>
-<polyline class="arrd" points="534,741 548,741" marker-end="url(#ahd)"/>
-<text class="foot" x="24" y="818" text-anchor="start">实心点：调用 LLM 网关计费的步骤。其余步骤、以及 gate / ledger / game 全离线；虚线为外部依赖或可选增强。</text>
-</svg>
+      <img class="map-img" src="architecture.svg" loading="lazy" alt="技术架构总图：控制面、批处理十步、产物链、运行时">
     </div>
     <p class="maphint">左右滑动查看全图</p>
     <p class="note reveal">四条横向带：<strong>控制面</strong>决定按哪个阶段干活、过哪道门槛；<strong>批处理</strong>是十个步骤，实心点表示这一步要调用模型、计入额度；<strong>产物</strong>是 <code>build/</code> 下的数据契约，任何一步都能从上游重建；<strong>运行时</strong>用同一个 <code>engine.py</code> 同时服务网页和模拟器。虚线是外部依赖或可选增强。</p>

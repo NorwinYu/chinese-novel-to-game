@@ -102,6 +102,12 @@ python -m n2g play --slug demo --port 8765     # http://127.0.0.1:8765/
 
 框架只认语法级的词（“道”“说”“众人”）。题材、年代、称呼体系、地名写法一律由每本书的规则文件表达；规则表达不了的，才在 `games/<slug>/plugins/` 写十几行 Python。
 
+### 架构总图
+
+![技术架构总图](docs/architecture.svg)
+
+<sub>控制面 / 批处理十步 / 产物链 / 运行时。实心点表示该步骤要调用模型、计入额度；虚线为外部依赖或可选增强。图较宽，点开可看原尺寸；带交互的版本在[介绍页](https://norwinyu.github.io/chinese-novel-to-game/#map)。</sub>
+
 ### 流水线
 
 ```
