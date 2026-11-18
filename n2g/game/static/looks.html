@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>外观预览</title>
+<style>
+  body { margin: 0; background: #141519; color: #e8e6e1; font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  #bar { display: flex; gap: 8px; padding: 8px 12px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  select, button { background: #2a2d36; color: #e8e6e1; border: 1px solid #555; border-radius: 6px; padding: 4px 10px; font-size: 13px; }
+  #view { flex: 1; position: relative; }
+  canvas { width: 100%; height: 100%; display: block; }
+  #info { position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: #aaa; white-space: pre-wrap; max-width: 60%; text-shadow: 0 1px 2px #000; }
+  .names { position: absolute; inset: 0; pointer-events: none; }
+  .names span { position: absolute; transform: translate(-50%, 0); font-size: 13px; background: rgba(0,0,0,.55); padding: 1px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <select id="mode"><option value="cast">人物</option><option value="place">地点</option><option value="event">事件定格</option></select>
+  <select id="item"></select>
+  <select id="mood"></select>
+  <button id="cam">镜头：medium</button>
+</div>
+<div id="view"><canvas id="c"></canvas><div id="info"></div></div>
+<script type="module">
+import {Stage, MOODS, stillCast, addExtras} from "/static/scene.js";
+const $ = id => document.getElementById(id);
+const looks = await (await fetch("/api/looks")).json();
+const meta = await (await fetch("/api/meta")).json();
+const names = Object.fromEntries(Object.entries(meta.characters).map(([k, v]) => [k, v.name]));
+const stage = new Stage($("c"), {preserve: true});
+addEventListener("resize", () => stage.resize());
+let extras = null, shots = ["medium", "wide", "close"], shot = 0;
+for (const m of MOODS) $("mood").add(new Option(m, m));
+function fill() {
+  const m = $("mode").value, s = $("item"); s.innerHTML = "";
+  if (m === "cast") { s.add(new Option("全部人物", "")); for (const id of Object.keys(looks.characters)) s.add(new Option(names[id] || id, id)); }
+  if (m === "place") for (const n of Object.keys(looks.places)) s.add(new Option(n, n));
+  if (m === "event") for (const b of Object.keys(looks.events)) s.add(new Option("beat " + b, b));
+  show();
+}
+function show() {
+  const m = $("mode").value, v = $("item").value;
+  if (extras) { stage.scene.remove(extras); extras = null; }
+  let info = "";
+  if (m === "cast") {
+    const ids = v ? [v] : Object.keys(looks.characters).slice(0, 6);
+    stage.setPlace(looks.places[Object.keys(looks.places)[0]], "preview-cast");
+    stage.setCast(ids.map(id => ({id, look: looks.characters[id], mood: $("mood").value})));
+    stage.focus(v || null, shots[shot]);
+    info = ids.map(id => (names[id] || id) + " " + JSON.stringify(looks.characters[id])).join("\n");
+  } else if (m === "place") {
+    stage.setCast([]); stage.setPlace(looks.places[v], v); stage.focus(null, shots[shot]);
+    info = v + " " + JSON.stringify(looks.places[v]);
+  } else {
+    const ev = looks.events[v], node = meta.map.nodes.find(n => n.first_beat !== null) || {};
+    const at = (meta.beat_nodes || [])[+v] || Object.keys(looks.places)[0];
+    stage.setPlace(looks.places[at], at, {time: ev.time});
+    stage.setCast(stillCast(ev, looks, names)); extras = addExtras(stage, ev);
+    stage.focus(ev.camera === "close" ? ev.people[0].id : null, ev.camera);
+    info = "beat " + v + " @ " + at + "\n" + JSON.stringify(ev);
+  }
+  stage.snap();
+  $("info").textContent = info;
+}
+$("mode").onchange = fill; $("item").onchange = show;
+$("mood").onchange = () => { for (const [id] of stage.cast) stage.setMood(id, $("mood").value); };
+$("cam").onclick = () => { shot = (shot + 1) % 3; $("cam").textContent = "镜头：" + shots[shot]; show(); };
+fill(); stage.start();
+window.__ready = true;
+</script>
+</body>
+</html>

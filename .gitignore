@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+*key*.txt
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+.cache/
+games/*/build/
+/build/
+golden/*.local.jsonl

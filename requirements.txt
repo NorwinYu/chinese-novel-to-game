@@ -1,0 +1,10 @@
+httpx
+fastapi
+uvicorn
+jieba
+pydantic
+pillow
+pytest
+# optional: local embeddings for the NPC memory ranking (⑥); BM25 works without it
+# fastembed
+# numpy  # needed by fastembed

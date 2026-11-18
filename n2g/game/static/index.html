@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>小说游戏</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --gold: #d8b96e; --ink: #141519; --panel: rgba(20,22,28,.88); --line: rgba(255,255,255,.1); }
+  body { margin: 0; font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #f0ede6; height: 100vh; overflow: hidden; background: var(--ink); }
+  #stage3d { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #pic { position: fixed; inset: 0; background: #141519 center/cover no-repeat; display: none; }
+  #pic::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(16,17,21,.25), rgba(16,17,21,.1) 50%, rgba(16,17,21,.8)); }
+  #actors { position: fixed; left: 0; right: 0; bottom: 200px; display: none; align-items: flex-end; justify-content: center; gap: 3vw; pointer-events: none; }
+  .actor { height: 52vh; max-height: 560px; aspect-ratio: 3/4.4; object-fit: cover; object-position: center 8%; border-radius: 10px 10px 0 0;
+           filter: grayscale(.45) brightness(.62); transition: filter .3s, transform .3s; -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+  .actor.on { filter: none; transform: scale(1.04); }
+  #shade { position: fixed; left: 0; right: 0; bottom: 0; height: 46vh; background: linear-gradient(transparent, rgba(12,13,16,.85)); pointer-events: none; }
+  #top { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; gap: 12px; padding: 10px 14px; z-index: 5; pointer-events: none; }
+  #top > * { pointer-events: auto; }
+  #where { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; color: #cfc9bc; max-width: 38vw; }
+  #where b { color: var(--gold); font-weight: 600; margin-right: 6px; }
+  #prog { height: 3px; background: #333; border-radius: 2px; margin-top: 6px; overflow: hidden; } #prog i { display: block; height: 100%; background: var(--gold); }
+  #hud { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: flex; gap: 14px; align-items: center; font-size: 12px; flex-wrap: wrap; }
+  .stat { min-width: 92px; } .stat .lab { display: flex; justify-content: space-between; color: #bdb7aa; } .stat .lab b { color: #f0ede6; }
+  .bar { height: 6px; background: #2c2f38; border-radius: 3px; overflow: hidden; margin-top: 3px; } .bar i { display: block; height: 100%; background: #8fb37a; transition: width .5s; }
+  .stat.low .bar i { background: #d0644f; } .stat.goal .bar i { background: var(--gold); }
+  .stat.flash { animation: flash .8s; } @keyframes flash { 0%,100% { transform: none; } 30% { transform: scale(1.08); } }
+  #btns { margin-left: auto; display: flex; gap: 6px; }
+  button { background: rgba(40,44,54,.92); color: #e8e6e1; border: 1px solid #555; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 13px; font-family: inherit; }
+  button:hover:not(:disabled) { border-color: var(--gold); } button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 600; }
+  #box { position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px; width: min(900px, 94vw); cursor: pointer; z-index: 6;
+         background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 24px 14px; backdrop-filter: blur(6px); }
+  #speaker { display: inline-block; color: var(--ink); background: var(--gold); font-weight: bold; border-radius: 6px; padding: 2px 12px; margin: -34px 0 10px; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  #speaker:empty { visibility: hidden; }
+  #text { line-height: 1.9; font-size: 18px; min-height: 3.6em; white-space: pre-wrap; }
+  #text.narr { color: #e8d9b0; font-style: italic; }
+  #hint { display: flex; justify-content: space-between; color: #8f8a80; font-size: 12px; margin-top: 6px; }
+  #chips { position: fixed; right: 18px; bottom: 210px; display: flex; flex-direction: column; gap: 8px; z-index: 6; align-items: flex-end; }
+  .chip { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
+  .chip:hover { border-color: var(--gold); } .chip small { color: #8f8a80; }
+  .chip img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: center 12%; margin-left: -8px; }
+  .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 9; background: rgba(10,11,14,.45); }
+  .overlay.show { display: flex; }
+  .card { background: rgba(22,24,30,.96); border: 1px solid #3a3d46; border-radius: 14px; padding: 22px 24px; width: min(720px, 94vw); max-height: 86vh; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  .card h2 { margin: 0 0 6px; font-size: 18px; color: var(--gold); } .card .sub { color: #a9a396; font-size: 13px; margin-bottom: 14px; }
+  .card p.prompt { font-size: 17px; line-height: 1.8; margin: 4px 0 16px; }
+  .opt { display: block; width: 100%; text-align: left; padding: 12px 16px; margin: 8px 0; font-size: 16px; border-radius: 10px; }
+  .opt .why { display: block; font-size: 12px; color: #d0907f; margin-top: 4px; }
+  .opt.canon::after { content: "原著"; float: right; font-size: 11px; color: #8f8a80; border: 1px solid #555; border-radius: 4px; padding: 0 5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .act { text-align: left; padding: 12px; border-radius: 10px; } .act b { display: block; font-size: 15px; margin-bottom: 4px; } .act span { color: #a9a396; font-size: 12px; }
+  .fx { margin-top: 6px; font-size: 12px; } .fx i { font-style: normal; margin-right: 8px; } .up { color: #8fcf7a; } .down { color: #e07a66; }
+  .person { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 10px; }
+  .person img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; object-position: center 10%; }
+  .clue { font-size: 13px; color: #cfc9bc; margin: 4px 0; } .clue b { color: var(--gold); }
+  h4 { margin: 18px 0 8px; font-size: 13px; color: #a9a396; font-weight: normal; letter-spacing: .1em; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 94vw); background: rgba(18,19,24,.97); border-left: 1px solid #333;
+            transform: translateX(100%); transition: transform .25s; z-index: 10; display: flex; flex-direction: column; }
+  .drawer.open { transform: none; } .drawer.wide { width: min(980px, 96vw); }
+  .drawer h3 { margin: 0; padding: 12px 14px; font-size: 15px; color: var(--gold); border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+  .drawer h3 img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; object-position: center 10%; }
+  .drawer h3 .x { margin-left: auto; } .drawer h3 small { color: #8f8a80; font-weight: normal; }
+  #chatlog { flex: 1; overflow-y: auto; padding: 12px 14px; font-size: 15px; line-height: 1.7; }
+  .me { color: #9cc3e6; } .npc { color: #f0ede6; } .actx { color: #8f8a80; font-size: 13px; } .sys { color: var(--gold); font-size: 13px; margin: 6px 0; }
+  #say { display: flex; border-top: 1px solid #333; } #say input { flex: 1; background: #22242c; color: #eee; border: 0; padding: 12px; font-size: 15px; outline: none; font-family: inherit; }
+  #mapview { position: relative; flex: 1; min-height: 0; } #mapcanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; } #maplabels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .maplabel { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; background: rgba(20,22,28,.85); border: 1px solid #4a4f5c; border-radius: 8px; padding: 2px 8px; font-size: 12px; white-space: nowrap; text-align: center; }
+  .maplabel.here { background: var(--gold); color: var(--ink); font-weight: 600; } .maplabel small { display: block; color: #9cc3e6; font-size: 11px; } .maplabel.here small { color: #3a3020; }
+  #maphint { padding: 10px 14px; font-size: 13px; color: #a9a396; border-top: 1px solid #333; min-height: 48px; }
+  #logbody { flex: 1; overflow-y: auto; padding: 12px 16px; font-size: 14px; line-height: 1.7; }
+  #toasts { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
+  .toast { background: rgba(20,22,28,.94); border: 1px solid #4a4f5c; border-radius: 8px; padding: 6px 14px; font-size: 14px; animation: fade 3.2s forwards; }
+  .toast.intel { border-color: var(--gold); color: var(--gold); }
+  @keyframes fade { 0% { opacity: 0; transform: translateY(-6px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  #fade { position: fixed; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 8; }
+  .end-win h2 { color: #e8cf86; } .end-lose h2 { color: #e07a66; }
+</style>
+</head>
+<body>
+<canvas id="stage3d"></canvas>
+<div id="pic"></div>
+<div id="actors"></div>
+<div id="shade"></div>
+<div id="top">
+  <div id="where"><div id="wtext"></div><div id="prog"><i></i></div></div>
+  <div id="hud"></div>
+  <div id="btns"><button id="mapbtn">地图</button><button id="logbtn">记录</button><button id="artbtn" title="画面来源">画面</button><button id="restart">重来</button></div>
+</div>
+<div id="chips"></div>
+<div id="box"><div id="speaker"></div><div id="text">载入中……</div><div id="hint"><span id="hintl"></span><span>点击或按空格继续</span></div></div>
+
+<div id="choice" class="overlay"><div class="card"><h2>抉择</h2><div class="sub" id="csub"></div><p class="prompt" id="cprompt"></p><div id="copts"></div></div></div>
+<div id="free" class="overlay"><div class="card"><h2 id="ftitle">空闲时间</h2><div class="sub" id="fsub"></div>
+  <div class="grid" id="facts"></div>
+  <h4>去找人（花一段时间）</h4><div class="grid" id="fvisit"></div><div id="fclues"></div>
+  <div style="margin-top:18px; display:flex; gap:8px; justify-content:flex-end"><button id="fmap">在地图上看</button><button class="primary" id="fleave">继续故事</button></div></div></div>
+<div id="ending" class="overlay"><div class="card" id="ecard"><h2 id="etitle"></h2><div class="sub" id="esub"></div><p class="prompt" id="etext"></p><div id="estats"></div>
+  <div style="margin-top:18px; display:flex; justify-content:flex-end"><button class="primary" id="eagain">再玩一次</button></div></div></div>
+
+<div id="chat" class="drawer"><h3><span id="cname"></span><small id="cleft"></small><button class="x" id="cclose">离开</button></h3><div id="chatlog"></div><div id="say"><input id="msg" placeholder="说点什么，回车发送" autocomplete="off"></div></div>
+<div id="map" class="drawer wide"><h3>地图 <small>拖动旋转，滚轮缩放</small><button class="x" id="mclose">关闭</button></h3><div id="mapview"><canvas id="mapcanvas"></canvas><div id="maplabels"></div></div><div id="maphint"></div></div>
+<div id="log" class="drawer"><h3>记录<button class="x" id="lclose">关闭</button></h3><div id="logbody"></div></div>
+<div id="toasts"></div>
+<div id="fade"></div>
+
+<script type="module">
+import {Stage, Diorama, stillCast, addExtras} from "/static/scene.js";
+const $ = id => document.getElementById(id);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const SLOT = new URLSearchParams(location.search).get("slot") || "default";
+let meta, looks, V, chats = {}, pi = 0, talking = null, busy = false, stage = null, extras = null, map = null;
+let artMode = localStorage.getItem("n2g-art") || "auto";
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  if (!r.ok) { let d = r.status; try { d = (await r.json()).detail || d; } catch (e) {} throw new Error(typeof d === "string" ? d : JSON.stringify(d)); }
+  return r.json();
+}
+function toast(t, cls = "") { const d = el("div", "toast " + cls, t); $("toasts").appendChild(d); setTimeout(() => d.remove(), 3300); }
+const sign = v => (v > 0 ? "+" : "") + v;
+function fxHtml(effects) {
+  const stats = Object.fromEntries(V.hud.stats.map(s => [s.id, s]));
+  const d = el("div", "fx");
+  for (const [k, v] of Object.entries(effects || {})) d.appendChild(el("i", v > 0 ? "up" : "down", `${stats[k] ? stats[k].name : k} ${sign(v)}`));
+  return d;
+}
+
+/* ---------------- picture: 3D by default, AI images where they exist ---------------- */
+const TIME = [[/(深夜|半夜|夜里|夜间|晚上|夜晚|入夜|黑夜|夜)/, "night"], [/(傍晚|黄昏|日落|天黑前|擦黑)/, "dusk"]];
+function timeOf(text) { for (const [re, t] of TIME) if (re.test(text || "")) return t; return null; }
+function useImages() {
+  if (artMode === "3d") return false;
+  return !!(V.beat.backdrop || (V.beat.event_art && V.phase === "choice"));
+}
+function picture(speakerCid, mood) {
+  const b = V.beat, img = useImages();
+  $("stage3d").style.display = img ? "none" : "block";
+  $("pic").style.display = $("actors").style.display = img ? (img ? "flex" : "none") : "none";
+  $("pic").style.display = img ? "block" : "none";
+  if (img) {
+    if (stage) stage.stop();
+    const ev = b.event_art && (V.phase === "choice" || b.anchor) ? b.event_art : null;
+    $("pic").style.backgroundImage = `url("/api/art/${ev || b.backdrop}")`;
+    const box = $("actors"); box.innerHTML = "";
+    if (!ev) for (const c of castNow().filter(c => c.portrait)) {
+      const im = el("img", "actor"); const m = c.id === (talking && talking.cid) ? talking.mood : null;
+      im.src = "/api/art/" + ((m && c.expressions[m]) || c.portrait); im.classList.toggle("on", c.id === speakerCid); box.appendChild(im);
+    }
+    return;
+  }
+  if (!stage) { stage = new Stage($("stage3d")); addEventListener("resize", () => stage.resize()); }
+  stage.start();
+  const node = talking && talking.node ? talking.node : b.node;
+  const place = looks.places[node] || looks.places[b.node] || Object.values(looks.places)[0];
+  const still = b.anchor && looks.events[String(b.i)];
+  stage.setPlace(place, node || b.place, {time: (still && still.time) || timeOf(b.time) || undefined});
+  if (extras) { stage.scene.remove(extras); extras = null; }
+  let cast;
+  if (V.phase === "free" && !talking) cast = [hero()];
+  else if (talking && talking.node) cast = [hero(), {id: talking.cid, look: looks.characters[talking.cid], facing: meta.protagonist.id}];
+  else if (still && (V.phase === "choice" || V.beat.anchor)) { cast = stillCast(still, looks, {}); extras = addExtras(stage, still); }
+  else cast = castNow().map(c => ({id: c.id, look: looks.characters[c.id], facing: c.id === meta.protagonist.id ? (speakerCid || "camera") : "camera"}));
+  cast = cast.filter(c => c.look).slice(0, 5);
+  if (talking && talking.mood) cast = cast.map(c => c.id === talking.cid ? {...c, mood: talking.mood} : c);
+  if (V.phase === "end") cast = cast.map(c => c.id === meta.protagonist.id ? {...c, mood: V.ending.kind === "win" ? "高兴" : V.ending.kind === "lose" ? "难过" : "平静"} : c);
+  stage.setCast(cast);
+  const focusId = talking ? talking.cid : speakerCid;
+  stage.focus(focusId && cast.some(c => c.id === focusId) ? focusId : null, talking ? "close" : V.phase === "free" || V.phase === "end" ? "wide" : (still && V.phase === "choice" ? still.camera : "medium"));
+}
+const hero = () => ({id: meta.protagonist.id, look: looks.characters[meta.protagonist.id]});
+const castNow = () => V.cast;
+
+/* ---------------- HUD ---------------- */
+function hud() {
+  const b = V.beat, h = V.hud;
+  $("wtext").innerHTML = "";
+  $("wtext").appendChild(el("b", "", b.stage_name || ""));
+  $("wtext").appendChild(document.createTextNode(`第${b.chapter + 1}章 · ${b.node || b.place}${b.time ? " · " + b.time : ""}${b.anchor ? " ★" : ""}`));
+  $("prog").firstChild.style.width = (100 * (V.progress.k + 1) / V.progress.n) + "%";
+  const box = $("hud"); box.innerHTML = "";
+  const g = h.goal, gs = h.stats.find(s => s.id === g.stat);
+  const goal = el("div", "stat goal"); goal.title = g.text;
+  goal.innerHTML = `<div class="lab"><span>目标：${g.text}</span></div>`;
+  goal.querySelector(".lab").appendChild(el("b", "", `${g.value}/${g.target}${gs.unit}`));
+  goal.appendChild(el("div", "bar")).appendChild(el("i")).style.width = Math.min(100, 100 * g.value / g.target) + "%";
+  goal.style.minWidth = "200px";
+  box.appendChild(goal);
+  for (const s of h.stats) {
+    const d = el("div", "stat"); d.dataset.id = s.id;
+    const frac = (s.value - s.min) / (s.max - s.min);
+    if (s.danger && frac < 0.3) d.classList.add("low");
+    d.appendChild(el("div", "lab")).append(el("span", "", s.name), el("b", "", `${s.value}${s.unit}`));
+    d.appendChild(el("div", "bar")).appendChild(el("i")).style.width = 100 * frac + "%";
+    box.appendChild(d);
+  }
+}
+
+/* ---------------- reading ---------------- */
+function showPage() {
+  const pg = V.pages[pi];
+  $("box").style.display = "";
+  $("speaker").textContent = pg ? pg.speaker : "";
+  $("text").textContent = pg ? pg.text : "";
+  $("text").classList.toggle("narr", !!(pg && pg.narration));
+  $("hintl").textContent = V.phase === "narrate" ? "（你的选择改变了这一段）" : V.pages.length ? `${pi + 1}/${V.pages.length}` : "";
+  localStorage.setItem(`n2g-page:${meta.slug}:${SLOT}`, JSON.stringify({turn: V.turn, pi}));
+  picture(pg && pg.cid, null);
+}
+async function advance() {
+  if (busy || talking || !["read", "narrate"].includes(V.phase)) return;
+  if (pi < V.pages.length - 1) { pi++; showPage(); return; }
+  await move({type: "next"});
+}
+async function move(m) {
+  busy = true;
+  try {
+    const r = await api("/api/game/act", {slot: SLOT, move: m});
+    const changed = r.view.beat.i !== V.beat.i;
+    if (changed) { $("fade").style.opacity = 1; await new Promise(r => setTimeout(r, 250)); }
+    events(r.events);
+    render(r.view, 0);
+    if (changed) setTimeout(() => $("fade").style.opacity = 0, 60);
+  } catch (e) { toast(e.message); }
+  busy = false;
+}
+function events(evs) {
+  for (const e of evs || []) {
+    if (e.type === "stat" && e.delta) { toast(`${e.name} ${sign(e.delta)}`); }
+    if (e.type === "rel") toast(`${e.name} 对你的好感 ${sign(e.delta)}`);
+    if (e.type === "intel") toast(`打听到：${e.topic} —— ${e.answer}`, "intel");
+    if (e.type === "did") toast(`你${e.name}`);
+  }
+}
+
+/* ---------------- render a view ---------------- */
+function render(v, startPage) {
+  V = v; pi = startPage || 0;
+  for (const o of ["choice", "free", "ending"]) $(o).classList.remove("show");
+  hud(); chips();
+  if (v.phase === "read" && !v.pages.length) { picture(null); return move({type: "next"}); }
+  if (v.phase === "read" || v.phase === "narrate") { showPage(); }
+  else { $("box").style.display = "none"; picture(null); }
+  if (v.phase === "choice") showChoice();
+  if (v.phase === "free" && !(talking && talking.node)) showFree();
+  if (v.phase === "end") showEnding();
+  if (map && $("map").classList.contains("open")) drawMap();
+}
+function chips() {
+  const box = $("chips"); box.innerHTML = "";
+  for (const c of V.talk) {
+    const b = el("div", "chip");
+    if (c.portrait && artMode !== "3d") { const im = el("img"); im.src = "/api/art/" + c.portrait; b.appendChild(im); }
+    b.append(el("span", "", "和" + c.name + "说话"), el("small", "", c.left > 0 ? `（还能说${c.left}句）` : "（说够了）"));
+    b.onclick = () => openChat({cid: c.id, name: c.name, portrait: c.portrait});
+    box.appendChild(b);
+  }
+}
+function showChoice() {
+  const c = V.choice;
+  $("csub").textContent = `第${V.beat.chapter + 1}章 · ${V.beat.node || V.beat.place}`;
+  $("cprompt").textContent = c.prompt;
+  const box = $("copts"); box.innerHTML = "";
+  for (const o of c.options) {
+    const b = el("button", "opt" + (o.canon ? " canon" : ""), o.text);
+    if (o.locked.length) { b.disabled = true; b.appendChild(el("span", "why", "需要：" + o.needs_text.join("，"))); }
+    b.onclick = () => move({type: "choose", option: o.id});
+    box.appendChild(b);
+  }
+  // talking is still allowed before deciding
+  $("choice").classList.add("show");
+}
+function showFree() {
+  const f = V.free;
+  $("ftitle").textContent = `空闲时间 · 还剩 ${f.slots} 段`;
+  $("fsub").textContent = "每做一件事花一段时间。用完了就继续故事。";
+  const acts = $("facts"); acts.innerHTML = "";
+  for (const a of f.actions) {
+    const b = el("button", "act"); b.append(el("b", "", a.name), el("span", "", a.desc), fxHtml(a.effects));
+    if (!a.ok) b.appendChild(el("span", "why", "需要：" + a.needs_text.join("，")));
+    b.disabled = !a.ok || f.slots <= 0;
+    b.onclick = () => move({type: "do", action: a.id});
+    acts.appendChild(b);
+  }
+  const vis = $("fvisit"); vis.innerHTML = "";
+  if (!f.visit.length) vis.appendChild(el("div", "clue", "现在找不到熟人。"));
+  for (const p of f.visit) {
+    const b = el("button", "person");
+    if (p.portrait && artMode !== "3d") { const im = el("img"); im.src = "/api/art/" + p.portrait; b.appendChild(im); }
+    const t = el("div"); t.append(el("div", "", p.name), el("small", "clue", p.node)); b.appendChild(t);
+    b.disabled = f.slots <= 0;
+    b.onclick = () => visit(p.id);
+    vis.appendChild(b);
+  }
+  const cl = $("fclues"); cl.innerHTML = "";
+  if (V.hud.clues.length) { cl.appendChild(el("h4", "", "线索")); for (const c of V.hud.clues) { const d = el("div", "clue"); d.append("可以找 ", el("b", "", c.who), " 打听：" + c.topic); cl.appendChild(d); } }
+  $("free").classList.add("show");
+}
+async function visit(cid) {
+  await move({type: "visit", cid});
+  if (V.chat) {
+    const p = V.free.visit.find(x => x.id === cid) || {};
+    $("free").classList.remove("show");
+    openChat({cid, name: p.name, portrait: p.portrait, node: V.free.visiting.node});
+  }
+}
+function showEnding() {
+  const e = V.ending;
+  $("ecard").className = "card end-" + e.kind;
+  $("etitle").textContent = {win: "结局 · ", lose: "结局 · ", neutral: "结局 · "}[e.kind] + e.title;
+  $("esub").textContent = `${{win: "达成目标", lose: "失败", neutral: "未达成目标"}[e.kind]} · 第${V.beat.chapter + 1}章`;
+  $("etext").textContent = e.text;
+  const s = $("estats"); s.innerHTML = "";
+  s.appendChild(el("div", "clue", V.hud.stats.map(x => `${x.name} ${x.value}${x.unit}`).join("　")));
+  const dev = V.hud.log.filter(x => !x.canon).length;
+  s.appendChild(el("div", "clue", `抉择 ${V.hud.log.length} 次，其中 ${dev} 次和原著不同；打听到 ${V.hud.intel.length} 条情报。`));
+  $("ending").classList.add("show");
+}
+$("eagain").onclick = async () => { const r = await api("/api/game/new", {slot: SLOT}); chats = {}; render(r.view, 0); };
+
+/* ---------------- talk ---------------- */
+function openChat(t) {
+  talking = {...t, mood: null}; $("chat").classList.add("open"); $("chatlog").innerHTML = "";
+  $("cname").innerHTML = "";
+  if (t.portrait && artMode !== "3d") { const im = el("img"); im.src = "/api/art/" + t.portrait; $("cname").appendChild(im); }
+  const rel = (V.cast.concat(V.free ? V.free.visit : [])).find(x => x.id === t.cid);
+  $("cname").appendChild(el("span", "", t.name + (rel && rel.rel != null ? `（好感 ${rel.rel}）` : "")));
+  const key = t.cid + "@" + V.beat.i + (t.node ? "@" + t.node : "");
+  t.key = talking.key = key; (chats[key] || []).forEach(h => line(h));
+  if (V.hud.clues.some(c => c.who === t.name)) line({role: "sys", text: "线索：" + V.hud.clues.filter(c => c.who === t.name).map(c => c.topic).join("、")});
+  left(); picture(null); $("msg").focus();
+}
+function left(n) {
+  const c = V.talk.find(x => x.id === talking.cid);
+  const k = n != null ? n : V.chat && V.chat.cid === talking.cid ? V.chat.left : c ? c.left : 0;
+  $("cleft").textContent = `还能说 ${k} 句`; $("msg").disabled = k <= 0; $("msg").placeholder = k > 0 ? "说点什么，回车发送" : "该走了";
+}
+function closeChat() {
+  const wasVisit = talking && talking.node;
+  talking = null; $("chat").classList.remove("open");
+  if (V) { chips(); picture(V.pages[pi] && V.pages[pi].cid); if (wasVisit && V.phase === "free") showFree(); }
+}
+$("cclose").onclick = closeChat;
+function line(h) {
+  const d = el("div");
+  if (h.role === "player") d.appendChild(el("span", "me", meta.protagonist.name + "：" + h.text));
+  else if (h.role === "sys") d.appendChild(el("div", "sys", h.text));
+  else { d.appendChild(el("span", "npc", talking.name + "：" + h.text)); if (h.act) d.appendChild(el("span", "actx", "（" + h.act + "）")); }
+  $("chatlog").appendChild(d); $("chatlog").scrollTop = 1e9;
+}
+$("msg").onkeydown = async e => {
+  if (e.key === "Escape") return closeChat();
+  if (e.key !== "Enter" || e.isComposing || !$("msg").value.trim() || !talking || busy) return;
+  const text = $("msg").value.trim(); $("msg").value = ""; line({role: "player", text});
+  busy = true; $("msg").disabled = true;
+  try {
+    const pg = V.pages[Math.min(pi, V.pages.length - 1)];
+    const r = await api("/api/game/talk", {slot: SLOT, cid: talking.cid, text, upto_p: pg ? pg.p : null});
+    chats[r.key] = (chats[r.key] || []).concat([{role: "player", text}, {role: "npc", text: r.reply.say, act: r.reply.act}]);
+    line({role: "npc", text: r.reply.say, act: r.reply.act});
+    for (const ev of r.events) {
+      if (ev.type === "intel") line({role: "sys", text: `【打听到】${ev.topic}：${ev.answer}`});
+      if (ev.type === "rel") line({role: "sys", text: `${ev.name}对你的好感 ${sign(ev.delta)}（${ev.value}）`});
+    }
+    events(r.events.filter(x => x.type === "intel"));
+    talking.mood = r.reply.mood;
+    const keep = pi; V = r.view; pi = keep; hud();
+    picture(null);
+  } catch (err) { line({role: "sys", text: "（" + err.message + "）"}); }
+  busy = false; left(); if (!$("msg").disabled) $("msg").focus();
+};
+
+/* ---------------- map ---------------- */
+function drawMap() {
+  if (!map) { map = new Diorama($("mapcanvas"), $("maplabels"), node => pickNode(node)); }
+  const people = {};
+  for (const [node, ps] of Object.entries(V.map.people)) people[node] = ps.map(p => ({name: p.name, look: looks.characters[p.id]}));
+  map.set({nodes: V.map.nodes, moves: V.map.moves, here: V.map.here, people, looks});
+  map.start();
+  $("maphint").textContent = V.phase === "free" ? `空闲时间还剩 ${V.free.slots} 段：点地点去找那里的人。` : "空闲时间（每章结束）才能去别处找人。";
+}
+function pickNode(node) {
+  if (V.phase !== "free") return toast("现在走不开。空闲时间才能去别处找人。");
+  const ps = (V.free.visit || []).filter(x => x.node === node);
+  if (!ps.length) return toast(`${node}现在没有熟人。`);
+  if (V.free.slots <= 0) return toast("空闲时间用完了。");
+  const h = $("maphint"); h.innerHTML = "";
+  h.append(`去${node}找谁？（花一段时间）`);
+  for (const p of ps) {
+    const b = el("button", "", p.name); b.style.marginLeft = "8px";
+    b.onclick = () => { $("map").classList.remove("open"); map.stop(); visit(p.id); };
+    h.appendChild(b);
+  }
+}
+$("mapbtn").onclick = () => { const o = $("map").classList.toggle("open"); if (o) setTimeout(drawMap, 30); else map && map.stop(); };
+$("mclose").onclick = () => { $("map").classList.remove("open"); map && map.stop(); };
+$("fmap").onclick = () => { $("map").classList.add("open"); setTimeout(drawMap, 30); };
+$("fleave").onclick = () => move({type: "leave"});
+
+/* ---------------- log, art toggle, restart ---------------- */
+$("logbtn").onclick = () => {
+  const b = $("logbody"); b.innerHTML = "";
+  b.appendChild(el("h4", "", "你的抉择"));
+  for (const x of V.hud.log) b.appendChild(el("div", "clue", `第${meta.chapter_of[x.beat] + 1}章：${x.text}${x.canon ? "（原著）" : ""}`));
+  b.appendChild(el("h4", "", "打听到的"));
+  for (const x of V.hud.intel) b.appendChild(el("div", "clue", `${x.who}：${x.topic} —— ${x.answer}`));
+  b.appendChild(el("h4", "", "线索"));
+  for (const x of V.hud.clues) b.appendChild(el("div", "clue", `可以找 ${x.who} 打听：${x.topic}`));
+  b.appendChild(el("h4", "", "人物好感"));
+  for (const x of V.hud.relations) b.appendChild(el("div", "clue", `${x.name}：${x.rel}`));
+  $("log").classList.add("open");
+};
+$("lclose").onclick = () => $("log").classList.remove("open");
+function artLabel() { $("artbtn").textContent = artMode === "3d" ? "画面：3D" : "画面：AI 图优先"; $("artbtn").style.display = meta.has_art ? "" : "none"; }
+$("artbtn").onclick = () => { artMode = artMode === "3d" ? "auto" : "3d"; localStorage.setItem("n2g-art", artMode); artLabel(); chips(); picture(V.pages[pi] && V.pages[pi].cid); };
+$("restart").onclick = async () => { if (confirm("清除存档，从头开始？")) { const r = await api("/api/game/new", {slot: SLOT}); chats = {}; render(r.view, 0); } };
+$("box").onclick = advance;
+document.addEventListener("keydown", e => {
+  if (document.activeElement === $("msg")) return;
+  if (e.key === " " || e.key === "Enter") { e.preventDefault(); advance(); }
+  if (e.key === "Escape") { closeChat(); $("map").classList.remove("open"); $("log").classList.remove("open"); }
+});
+
+(async () => {
+  meta = await api("/api/meta"); document.title = meta.title;
+  artLabel();
+  if (!meta.has_design) { $("text").textContent = "这本书还没有玩法设计：先运行 n2g design --slug " + meta.slug; return; }
+  looks = await api("/api/looks");
+  const r = await api("/api/game?slot=" + SLOT);
+  chats = r.chats || {};
+  for (const [k, h] of Object.entries(chats)) chats[k] = h.filter(x => x.role !== "sys");
+  const saved = JSON.parse(localStorage.getItem(`n2g-page:${meta.slug}:${SLOT}`) || "{}");
+  render(r.view, saved.turn === r.view.turn ? Math.min(saved.pi || 0, Math.max(0, r.view.pages.length - 1)) : 0);
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>
