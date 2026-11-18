@@ -67,6 +67,29 @@ python -m n2g play --slug demo --port 8765     # http://127.0.0.1:8765/
 
 `play` 需要先有 `build/design.json`（⑥b）。没有玩法设计时页面会提示先跑 `design`。
 
+### 哪些阶段需要 API key 和额度
+
+只有下表中标了「小额 / 中额 / 主要开销」的步骤会发起付费请求，其余步骤全部离线、免费。带 `--budget` 的命令到达上限后停止发起新请求，已完成的结果保留；模型调用按请求体哈希缓存，提示词不变不重复付费。
+
+| 阶段 | 命令 | 额度 | 说明 |
+|---|---|---|---|
+| ⓪ 书型诊断 | `profile` | 免费 | 纯统计 |
+| ① 清洗切章 | `ingest` `noise-test` `evidence` | 免费 | 纯规则；可选的 `noise-scan` 用模型 |
+| ② 逐章抽取 | `extract` | **主要开销** | 每章一次调用；先 `--chapters 0:30` 试点，再放开全书 |
+| ③ 全书归并 | `characters` | 小额 | 只把可疑条目对交给模型；`--no-llm` 完全免费 |
+| ③ 分词 / 地图 | `lexicon` `places` | 免费 | 纯统计 |
+| ⑤ 知识账本 | `ledger` `rules-test` | 免费 | 不调模型，几秒重建 |
+| ④ 角色档案 | `cards` | 中额 | 每张卡一次调用；先 `--dry-run` 估价，或 `--tiers S` 收窄 |
+| ⑥ 游戏化 | `game` | 免费 | 纯计算 |
+| ⑥b 玩法设计 | `design` | 小额 | frame / intel / 每个锚点各一次；`--check` 免费 |
+| ⑦ 画面 | `looks` | 小额 | 每个物件一次调用；`art render` 走本地图像服务，不占文本额度 |
+| ⑧ 验收 | `probe` | 小额 | 每条探针一次对话 |
+| 游玩 | `talk` `play` | 按对话计 | 每说一句一次调用；`play` 启动本身不花钱 |
+
+完全不调用模型的命令：`gate` `status` `golden` `eval` `extract --revalidate` `extract-review` `cards --dry-run` `cards --review` `design --check` `characters --no-llm` `ingest` `profile` `evidence` `grep` `show` `anomalies` `long-chapters` `noise-test` `plugin-test` `vocab-suggest` `vocab-test` `rules-test` `places` `lexicon` `ledger` `game` `timeline` `art sheet`。
+
+一句话：**⓪① 免费，② 是主要花费，③④⑥b⑦⑧ 是小额，⑥ 与账本免费**。
+
 ## 设计架构
 
 ### 三层分工

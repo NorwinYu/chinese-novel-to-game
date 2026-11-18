@@ -148,7 +148,7 @@ section{position:relative;padding:104px 0}
 /* pipeline */
 .pipe{display:grid;grid-template-columns:296px 1fr;border:1px solid var(--line);background:var(--panel)}
 .pipe-list{border-right:1px solid var(--line)}
-.pipe-list button{display:grid;grid-template-columns:30px 1fr;gap:8px;width:100%;text-align:left;
+.pipe-list button{display:grid;grid-template-columns:30px 1fr auto;gap:8px;width:100%;text-align:left;
   background:none;border:0;border-bottom:1px solid var(--line-2);padding:13px 18px;color:var(--muted);
   font:inherit;font-size:13px;cursor:pointer;transition:.22s;align-items:baseline}
 .pipe-list button:hover{color:var(--text);background:rgba(240,234,223,.022)}
@@ -157,6 +157,18 @@ section{position:relative;padding:104px 0}
 .pipe-list .pn{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.06em}
 .pipe-list button[aria-selected="true"] .pn{color:var(--accent)}
 .pipe-list .pc{display:block;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.06em;margin-top:2px}
+.cd{width:5px;height:5px;border-radius:50%;align-self:center;flex:none}
+.cd.api{background:var(--accent);box-shadow:0 0 0 3px rgba(208,90,65,.13)}
+.cd.free{border:1px solid var(--dim)}
+.badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;padding:5px 9px;border:1px solid var(--line);
+  color:var(--dim);white-space:nowrap;margin-left:16px}
+.badge.api{color:var(--accent);border-color:rgba(208,90,65,.4);background:rgba(208,90,65,.06)}
+.costnote{margin:16px 0 0;font-size:11.5px;line-height:1.85;color:var(--dim)}
+.costnote::before{content:"额度 · ";font-family:var(--mono);letter-spacing:.1em;color:var(--dim)}
+.legend{display:flex;align-items:center;gap:10px;margin:16px 0 0;font-size:11px;color:var(--dim);flex-wrap:wrap}
+.legend i{display:inline-block;width:5px;height:5px;border-radius:50%}
+.legend i.api{background:var(--accent)}
+.legend i.free{border:1px solid var(--dim);margin-left:20px}
 .pipe-panel{padding:42px 46px 40px;min-height:432px;display:flex;flex-direction:column;justify-content:center}
 .pp-head{display:flex;align-items:baseline;gap:18px;margin-bottom:30px}
 .pp-head .big{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.1em}
@@ -249,6 +261,8 @@ footer{border-top:1px solid var(--line);padding:54px 0 66px;color:var(--dim);fon
   .pipe-list{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr}
   .pipe-panel{min-height:0;padding:34px 28px}
   .pp-grid{grid-template-columns:1fr}
+  .pp-head{flex-wrap:wrap;gap:10px 14px}
+  .badge{margin-left:0}
   .stack,.start{grid-template-columns:1fr;gap:38px}
   .cards{grid-template-columns:repeat(2,1fr)}
   .row{grid-template-columns:40px 1fr;gap:8px 20px}
@@ -436,6 +450,7 @@ footer{border-top:1px solid var(--line);padding:54px 0 66px;color:var(--dim);fon
       <div class="pipe-list" role="tablist" aria-label="流水线步骤" id="pipeList"></div>
       <div class="pipe-panel" id="pipePanel" role="tabpanel" aria-live="polite"></div>
     </div>
+    <p class="legend reveal"><i class="api"></i>需要 API key 与额度<i class="free"></i>离线免费</p>
     <p class="note reveal">每一步都先看指标再过门槛。<code>gate</code> 记录指标与该阶段输入的哈希；改了规则或代码，<code>status</code> 会把受影响的阶段标成 stale——旧的“通过”不算数。</p>
   </div>
 </section>
@@ -528,7 +543,7 @@ footer{border-top:1px solid var(--line);padding:54px 0 66px;color:var(--dim);fon
           <li><h4>换成你的书</h4><p>长篇先做切片：在 <code>book.json</code> 写 <code>"pilot": "0:30"</code>，只在 20–30 章上走通全流程，估好费用再放开。</p></li>
           <li><h4>玩</h4><p><code>python -m n2g play --slug demo</code>，浏览器打开 127.0.0.1:8765。</p></li>
         </ol>
-        <p class="fine">测试全部离线，不读 <code>.env</code>，不需要模型：<code>pytest -q</code>。</p>
+        <p class="fine">测试全部离线，不读 <code>.env</code>，不需要模型：<code>pytest -q</code>。⓪① 免费；从 ② 起需要 API key 与额度，所有付费命令都支持 <code>--budget</code>。</p>
       </div>
       <div class="codewrap reveal">
         <button class="copy" data-copy>复制</button>
@@ -570,26 +585,36 @@ python -m n2g gate extract --slug demo</code></pre>
 
 <script>
 const STAGES = [
-  {n:"00", name:"书型诊断", en:"PROFILE", cmd:"python -m n2g profile --slug S", out:"book.json → profile",
-   gate:"无自动门槛：每个建议值抽样核对原文", why:"人称或引号判错，后面整批抽取返工。"},
-  {n:"01", name:"清洗切章", en:"INGEST", cmd:"python -m n2g ingest --slug S", out:"build/chapters.jsonl",
-   gate:"章节数可解释 · 噪声残留 0 · 编号审计", why:"宁可留下噪声，也不删正文；删掉的正文不可逆。"},
-  {n:"02", name:"逐章抽取", en:"EXTRACT", cmd:"python -m n2g extract --slug S --chapters 0:30", out:"build/extract/*.json",
-   gate:"覆盖 1 · 句式不一致 ≤2% · unverified ≤2%", why:"每条事实必须能逐字回到原文，否则退回重做。"},
-  {n:"03", name:"全书归并", en:"CONSOLIDATE", cmd:"python -m n2g characters / lexicon / places", out:"characters.json · userdict.txt · places.json",
-   gate:"有 S 级 · 找到主角 · 金标全过", why:"同一个人不同称呼、不同人同一称呼，都在这里分开。"},
-  {n:"05", name:"知识账本", en:"LEDGER", cmd:"python -m n2g ledger --slug S", out:"build/ledger.json",
-   gate:"witness_not_present ≤5%", why:"账本是 NPC 记忆的唯一来源，不调模型，几秒重建。"},
-  {n:"04", name:"角色档案", en:"CARDS", cmd:"python -m n2g cards --slug S --tiers S", out:"build/cards/<id>.json",
-   gate:"覆盖 1 · 待重写 0 · 无剧透", why:"每个剧情阶段一张卡，卡描述的是阶段末尾的状态。"},
-  {n:"06", name:"游戏化", en:"GAME", cmd:"python -m n2g game --slug S", out:"build/game.json",
-   gate:"node_coverage ≥0.5 · play_share ≥0.3 · anchors ≥3", why:"原著是主线；玩家走偏时，旁白把他接回下一场。"},
-  {n:"06b", name:"玩法设计", en:"DESIGN", cmd:"python -m n2g design --slug S --budget 0.2", out:"build/design.json · sim_report.json",
-   gate:"canon_survives · win_reachable · lose_reachable", why:"照原著走必须活到最后；会玩的人必须能赢；乱玩必须可能输。"},
-  {n:"07", name:"画面", en:"LOOKS", cmd:"python -m n2g looks --slug S", out:"build/looks.json（+ 可选 PNG）",
-   gate:"枚举校验器：不认识的值换默认并记录", why:"默认 low-poly 3D，离线可用；图像服务只是可选增强。"},
-  {n:"08", name:"验收", en:"ACCEPT", cmd:"python -m n2g probe --slug S --budget 0.1", out:"build/probe_report.json",
-   gate:"探针全过 · 人工实玩一遍", why:"剧透探针问未来，记忆探针问过去；最后自己下场玩。"}
+  {n:"00", name:"书型诊断", en:"PROFILE", cost:"free", cmd:"python -m n2g profile --slug S", out:"book.json → profile",
+   gate:"无自动门槛：每个建议值抽样核对原文", why:"人称或引号判错，后面整批抽取返工。",
+   costNote:"不调用模型：人称、引号、换行都是统计出来的。"},
+  {n:"01", name:"清洗切章", en:"INGEST", cost:"free", cmd:"python -m n2g ingest --slug S", out:"build/chapters.jsonl",
+   gate:"章节数可解释 · 噪声残留 0 · 编号审计", why:"宁可留下噪声，也不删正文；删掉的正文不可逆。",
+   costNote:"不调用模型：编码、噪声规则、切章、编号审计全是确定性代码。"},
+  {n:"02", name:"逐章抽取", en:"EXTRACT", cost:"api", cmd:"python -m n2g extract --slug S --chapters 0:30", out:"build/extract/*.json",
+   gate:"覆盖 1 · 句式不一致 ≤2% · unverified ≤2%", why:"每条事实必须能逐字回到原文，否则退回重做。",
+   costNote:"主要开销：每章一次调用。先抽 20–30 章试点，用 --budget 设上限，估好全书费用再放开。"},
+  {n:"03", name:"全书归并", en:"CONSOLIDATE", cost:"api", cmd:"python -m n2g characters / lexicon / places", out:"characters.json · userdict.txt · places.json",
+   gate:"有 S 级 · 找到主角 · 金标全过", why:"同一个人不同称呼、不同人同一称呼，都在这里分开。",
+   costNote:"只有 characters 用模型（仅裁可疑条目对，--no-llm 可完全免费）；lexicon 与 places 是纯统计。"},
+  {n:"05", name:"知识账本", en:"LEDGER", cost:"free", cmd:"python -m n2g ledger --slug S", out:"build/ledger.json",
+   gate:"witness_not_present ≤5%", why:"账本是 NPC 记忆的唯一来源，不调模型，几秒重建。",
+   costNote:"不调用模型：从抽取结果直接算谁在第几章知道什么。"},
+  {n:"04", name:"角色档案", en:"CARDS", cost:"api", cmd:"python -m n2g cards --slug S --tiers S", out:"build/cards/<id>.json",
+   gate:"覆盖 1 · 待重写 0 · 无剧透", why:"每个剧情阶段一张卡，卡描述的是阶段末尾的状态。",
+   costNote:"中额：每张卡一次调用。先跑 --dry-run 看张数与估价，或只做 --tiers S。"},
+  {n:"06", name:"游戏化", en:"GAME", cost:"free", cmd:"python -m n2g game --slug S", out:"build/game.json",
+   gate:"node_coverage ≥0.5 · play_share ≥0.3 · anchors ≥3", why:"原著是主线；玩家走偏时，旁白把他接回下一场。",
+   costNote:"不调用模型：把账本场景拼成 beats、锚点、地图与人物行踪。"},
+  {n:"06b", name:"玩法设计", en:"DESIGN", cost:"api", cmd:"python -m n2g design --slug S --budget 0.2", out:"build/design.json · sim_report.json",
+   gate:"canon_survives · win_reachable · lose_reachable", why:"照原著走必须活到最后；会玩的人必须能赢；乱玩必须可能输。",
+   costNote:"小额：frame、intel、每个锚点各一次调用；--check 只做校验和模拟，免费。"},
+  {n:"07", name:"画面", en:"LOOKS", cost:"api", cmd:"python -m n2g looks --slug S", out:"build/looks.json（+ 可选 PNG）",
+   gate:"枚举校验器：不认识的值换默认并记录", why:"默认 low-poly 3D，离线可用；图像服务只是可选增强。",
+   costNote:"小额：每个人物、地点、锚点各一次调用。art render 走本地图像服务，不占文本额度。"},
+  {n:"08", name:"验收", en:"ACCEPT", cost:"api", cmd:"python -m n2g probe --slug S --budget 0.1", out:"build/probe_report.json",
+   gate:"探针全过 · 人工实玩一遍", why:"剧透探针问未来，记忆探针问过去；最后自己下场玩。",
+   costNote:"小额：每条探针一次对话。游玩时每说一句一次调用，play 启动本身不花钱。"}
 ];
 
 const list = document.getElementById('pipeList');
@@ -601,7 +626,7 @@ STAGES.forEach((s, i) => {
   b.setAttribute('aria-selected', i === 2 ? 'true' : 'false');
   b.id = 'tab-' + i;
   b.innerHTML = '<span class="pn">' + s.n + '</span><span>' + s.name +
-    '<span class="pc">' + s.en + '</span></span>';
+    '<span class="pc">' + s.en + '</span></span><span class="cd ' + s.cost + '"></span>';
   b.addEventListener('click', () => select(i));
   b.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); select((i + 1) % STAGES.length); }
@@ -616,13 +641,15 @@ function select(i) {
   panel.setAttribute('aria-labelledby', 'tab-' + i);
   panel.innerHTML =
     '<div class="pp-head"><span class="big">' + s.n + '</span><h3>' + s.name +
-      '</h3><span class="en">' + s.en + '</span></div>' +
+      '</h3><span class="en">' + s.en + '</span>' +
+      '<span class="badge ' + s.cost + '">' + (s.cost === 'api' ? '需 API · 计费' : '免费 · 离线') + '</span></div>' +
     '<div class="pp-grid">' +
       '<div><span class="lbl">命令</span><code class="cmd">' + s.cmd + '</code></div>' +
       '<div><span class="lbl">产物</span><code class="cmd">' + s.out + '</code></div>' +
       '<div style="grid-column:1/-1"><span class="lbl">门槛</span><p class="gate">' + s.gate + '</p></div>' +
     '</div>' +
-    '<p class="why">' + s.why + '</p>';
+    '<p class="why">' + s.why + '</p>' +
+    '<p class="costnote">' + s.costNote + '</p>';
   if (!document.documentElement.classList.contains('static') && panel.animate) {
     panel.animate([{opacity: .35}, {opacity: 1}], {duration: 320, easing: 'ease-out'});
   }
